@@ -1,7 +1,7 @@
 {
-  "name": "sports-calendar-backend",
+  "name": "syncender-backend",
   "version": "1.0.0",
-  "description": "Backend for Sports Calendar Integration App",
+  "description": "Backend for Syncender - Sports Calendar Integration App",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

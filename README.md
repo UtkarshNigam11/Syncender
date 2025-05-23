@@ -1,4 +1,4 @@
-# Sports Calendar Integration
+# Syncender
 
 A MERN stack application that allows users to track sports events and integrate them with their Google Calendar and Apple Calendar.
 
@@ -31,7 +31,7 @@ A MERN stack application that allows users to track sports events and integrate 
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd sports-calendar-integration
+cd syncender
 ```
 
 2. Install backend dependencies:
