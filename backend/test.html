@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Syncender Test Page</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; max-width: 800px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin: 5px; }
+        #result { margin-top: 20px; white-space: pre-wrap; background: #f5f5f5; padding: 10px; border-radius: 4px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; }
+        input, textarea { width: 100%; padding: 8px; margin-bottom: 10px; }
+        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>Syncender Test Page</h1>
+    
+    <div class="section">
+        <h2>Test Google Calendar Connection</h2>
+        <button onclick="testCalendar()">Test Connection</button>
+    </div>
+
+    <div class="section">
+        <h2>Create New Event</h2>
+        <form id="eventForm" onsubmit="createEvent(event)">
+            <div class="form-group">
+                <label for="title">Event Title:</label>
+                <input type="text" id="title" required value="Football Match">
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Description:</label>
+                <textarea id="description">Local League Final Match</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="startTime">Start Time:</label>
+                <input type="datetime-local" id="startTime" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="endTime">End Time:</label>
+                <input type="datetime-local" id="endTime" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="sport">Sport:</label>
+                <input type="text" id="sport" required value="Football">
+            </div>
+            
+            <div class="form-group">
+                <label for="homeTeam">Home Team:</label>
+                <input type="text" id="homeTeam" required value="Team A">
+            </div>
+            
+            <div class="form-group">
+                <label for="awayTeam">Away Team:</label>
+                <input type="text" id="awayTeam" required value="Team B">
+            </div>
+            
+            <div class="form-group">
+                <label for="venueName">Venue Name:</label>
+                <input type="text" id="venueName" value="City Stadium">
+            </div>
+            
+            <div class="form-group">
+                <label for="venueLocation">Venue Location:</label>
+                <input type="text" id="venueLocation" value="123 Sports Ave">
+            </div>
+            
+            <button type="submit">Create Event</button>
+        </form>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        const token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODMwODA5MDM5YzJiMWU4MTRiOTdlZDEiLCJpYXQiOjE3NDgwMDkxMDQsImV4cCI6MTc0ODA5NTUwNH0.lxLCFr10jih6VdGPCzti-qOXVFxkKnvbln-3cpwlI6M';
+
+        // Set default times (next day at 6 PM)
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(18, 0, 0, 0);
+        const endTime = new Date(tomorrow);
+        endTime.setHours(20, 0, 0, 0);
+
+        document.getElementById('startTime').value = tomorrow.toISOString().slice(0, 16);
+        document.getElementById('endTime').value = endTime.toISOString().slice(0, 16);
+
+        async function testCalendar() {
+            try {
+                document.getElementById('result').textContent = 'Testing connection...';
+                
+                // Add timestamp to prevent caching
+                const timestamp = new Date().getTime();
+                const url = `http://localhost:5000/api/events/test-google-calendar?_=${timestamp}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                const responseText = await response.text();
+                console.log('Raw response:', responseText);
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (e) {
+                    throw new Error(`Invalid response: ${responseText}`);
+                }
+
+                document.getElementById('result').textContent = 
+                    'Connection Test Results:\n\n' +
+                    'Status: ' + response.status + '\n' +
+                    'Response:\n' +
+                    JSON.stringify(data, null, 2);
+                    
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('result').textContent = 
+                    'Error: ' + error.message;
+            }
+        }
+
+        async function createEvent(event) {
+            console.log('Form submitted!');  // Immediate log
+            event.preventDefault();
+            console.log('Event prevented default');  // Log after preventDefault
+            
+            // Log form values
+            console.log('Form values:', {
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                startTime: document.getElementById('startTime').value,
+                endTime: document.getElementById('endTime').value,
+                sport: document.getElementById('sport').value,
+                homeTeam: document.getElementById('homeTeam').value,
+                awayTeam: document.getElementById('awayTeam').value,
+                venueName: document.getElementById('venueName').value,
+                venueLocation: document.getElementById('venueLocation').value
+            });
+
+            const eventData = {
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                startTime: new Date(document.getElementById('startTime').value).toISOString(),
+                endTime: new Date(document.getElementById('endTime').value).toISOString(),
+                sport: document.getElementById('sport').value,
+                teams: {
+                    home: document.getElementById('homeTeam').value,
+                    away: document.getElementById('awayTeam').value
+                },
+                venue: {
+                    name: document.getElementById('venueName').value,
+                    location: document.getElementById('venueLocation').value
+                }
+            };
+
+            console.log('About to send request with data:', eventData);  // Log before fetch
+
+            try {
+                document.getElementById('result').textContent = 'Creating event...';
+                
+                // Add timestamp to prevent caching
+                const timestamp = new Date().getTime();
+                const url = `http://localhost:5000/api/events?_=${timestamp}`;
+                
+                console.log('Making request to:', url);  // Log the URL
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    },
+                    body: JSON.stringify(eventData)
+                });
+
+                console.log('Got response:', response.status);  // Log response status
+                const responseText = await response.text();
+                console.log('Raw response:', responseText);
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (e) {
+                    throw new Error(`Invalid response: ${responseText}`);
+                }
+
+                if (!response.ok) {
+                    throw new Error(`Server responded with ${response.status}: ${JSON.stringify(data)}`);
+                }
+
+                document.getElementById('result').textContent = 
+                    'Event Creation Results:\n\n' +
+                    'Status: ' + response.status + '\n' +
+                    'Response:\n' +
+                    JSON.stringify(data, null, 2) + '\n\n' +
+                    'Please check your Google Calendar to see the new event.';
+            } catch (error) {
+                console.error('Error creating event:', error);
+                document.getElementById('result').textContent = 
+                    'Error creating event:\n' +
+                    error.message + '\n\n' +
+                    'Please check the browser console (F12) for more details.';
+            }
+        }
+
+        // Add form submit event listener directly
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, setting up form listener');
+            const form = document.getElementById('eventForm');
+            form.addEventListener('submit', function(e) {
+                console.log('Form submit event triggered');
+                createEvent(e);
+            });
+        });
+    </script>
+</body>
+</html> 
