@@ -33,13 +33,9 @@ const eventSchema = new mongoose.Schema({
       required: [true, 'Away team is required']
     }
   },
-  venue: {
-    name: String,
-    location: String,
-    coordinates: {
-      latitude: Number,
-      longitude: Number
-    }
+  location: {
+    type: String,
+    required: [true, 'Location is required']
   },
   status: {
     type: String,

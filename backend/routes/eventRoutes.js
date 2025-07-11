@@ -3,6 +3,7 @@ const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const Event = require('../models/Event');
 const { protect } = require('../middleware/auth');
+const eventController = require('../controllers/eventController');
 
 // Apply auth middleware to all routes
 router.use(protect);
@@ -18,40 +19,13 @@ const validateEvent = [
 ];
 
 // Get all events for a user
-router.get('/', async (req, res) => {
-  try {
-    const events = await Event.find({ user: req.user.userId })
-      .sort({ startTime: 1 });
-    res.json(events);
-  } catch (error) {
-    console.error('Error fetching events:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+router.get('/', eventController.getEvents);
 
 // Create new event
-router.post('/', validateEvent, async (req, res) => {
-  try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
+router.post('/', validateEvent, eventController.createEvent);
 
-    const eventData = {
-      ...req.body,
-      user: req.user.userId,
-      source: 'manual'
-    };
-
-    const event = new Event(eventData);
-    await event.save();
-
-    res.status(201).json(event);
-  } catch (error) {
-    console.error('Error creating event:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
+// Add event to Google Calendar
+router.post('/:eventId/google', eventController.addToGoogleCalendar);
 
 // Get single event
 router.get('/:id', async (req, res) => {

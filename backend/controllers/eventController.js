@@ -1,31 +1,108 @@
 const { google } = require('googleapis');
-const oauth2Client = require('../config/google'); // adjust if path is different
+const oauth2Client = require('../config/google');
+const Event = require('../models/Event');
+const User = require('../models/User');
 
-const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+const calendar = google.calendar({ version: 'v3' });
 
-exports.addEvent = async (req, res) => {
+// Create a new event
+exports.createEvent = async (req, res) => {
   try {
-    const event = {
-      summary: 'Test Sports Event',
-      description: 'Football Match - Local League',
+    const { title, description, startTime, endTime, sport, teams, location } = req.body;
+    
+    // Create event in database
+    const newEvent = new Event({
+      title,
+      description,
+      startTime,
+      endTime,
+      sport,
+      teams,
+      location,
+      user: req.user.userId,
+      source: 'manual'
+    });
+    
+    await newEvent.save();
+    
+    res.status(201).json({
+      success: true,
+      data: newEvent
+    });
+  } catch (error) {
+    console.error('Error creating event:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Get all events for a user
+exports.getEvents = async (req, res) => {
+  try {
+    const events = await Event.find({ user: req.user.userId })
+      .sort({ startTime: 1 });
+    res.json(events);
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+// Add event to Google Calendar
+exports.addToGoogleCalendar = async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    
+    // Get event details
+    const event = await Event.findById(eventId);
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+    
+    // Get user's Google Calendar token
+    const user = await User.findById(req.user.userId);
+    if (!user.googleCalendarToken) {
+      return res.status(400).json({ message: 'Google Calendar not connected' });
+    }
+    
+    // Set auth credentials
+    oauth2Client.setCredentials({
+      access_token: user.googleCalendarToken.accessToken,
+      refresh_token: user.googleCalendarToken.refreshToken,
+      expiry_date: user.googleCalendarToken.expiryDate
+    });
+    
+    // Create Google Calendar event
+    const googleEvent = {
+      summary: event.title,
+      description: `${event.description || ''} - ${event.teams.home} vs ${event.teams.away}`,
       start: {
-        dateTime: '2025-05-22T18:00:00+05:30',
-        timeZone: 'Asia/Kolkata',
+        dateTime: event.startTime,
+        timeZone: 'UTC',
       },
       end: {
-        dateTime: '2025-05-22T19:00:00+05:30',
-        timeZone: 'Asia/Kolkata',
+        dateTime: event.endTime,
+        timeZone: 'UTC',
       },
+      location: event.location
     };
 
     const response = await calendar.events.insert({
+      auth: oauth2Client,
       calendarId: 'primary',
-      requestBody: event,
+      requestBody: googleEvent,
     });
 
-    res.status(200).json({ message: 'Event created', eventId: response.data.id });
+    // Update event with Google Calendar ID
+    event.googleCalendarEventId = response.data.id;
+    await event.save();
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'Event added to Google Calendar',
+      eventId: response.data.id 
+    });
   } catch (error) {
-    console.error('❌ Google Calendar API Error:', error.response?.data || error.message);
-    res.status(500).json({ error: 'Failed to create event' });
+    console.error('Google Calendar API Error:', error.response?.data || error.message);
+    res.status(500).json({ error: 'Failed to add event to Google Calendar' });
   }
 };
