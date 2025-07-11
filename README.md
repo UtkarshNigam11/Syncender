@@ -30,7 +30,7 @@ A MERN stack application that allows users to track sports events and integrate 
 
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/UtkarshNigam11/Syncender/
 cd syncender
 ```
 
