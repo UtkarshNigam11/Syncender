@@ -4,7 +4,7 @@ require('dotenv').config();
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  'http://localhost:5000/oauth2callback'  // Make sure this matches your Google Cloud Console configuration
+  'http://localhost:5000/api/auth/google/callback'  // Updated to match our auth callback route
 );
 
 const SCOPES = ['https://www.googleapis.com/auth/calendar'];
