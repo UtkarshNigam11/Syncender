@@ -94,7 +94,7 @@ npm run dev
 - [ ] Testing
 
 ### Frontend
-- [ ] Project setup
+- [x] Project setup
 - [ ] Authentication
 - [ ] Event management
 - [ ] Calendar integration
