@@ -1,0 +1,223 @@
+{
+  "info": {
+    "name": "Syncender Sports API",
+    "description": "Test collection for Sports Calendar Integration API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000/api"
+    },
+    {
+      "key": "jwt_token",
+      "value": "your-jwt-token-here"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sports API",
+      "item": [
+        {
+          "name": "Get Supported Sports",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sports/sports",
+              "host": ["{{base_url}}"],
+              "path": ["sports", "sports"]
+            }
+          }
+        },
+        {
+          "name": "Get NFL Live Scores",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sports/scores/nfl",
+              "host": ["{{base_url}}"],
+              "path": ["sports", "scores", "nfl"]
+            }
+          }
+        },
+        {
+          "name": "Get NBA Teams",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sports/teams/nba",
+              "host": ["{{base_url}}"],
+              "path": ["sports", "teams", "nba"]
+            }
+          }
+        },
+        {
+          "name": "Get MLB Standings",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sports/standings/mlb",
+              "host": ["{{base_url}}"],
+              "path": ["sports", "standings", "mlb"]
+            }
+          }
+        },
+        {
+          "name": "Get Cricket Live Events",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sports/scores/cricket",
+              "host": ["{{base_url}}"],
+              "path": ["sports", "scores", "cricket"]
+            }
+          }
+        },
+        {
+          "name": "Get Cricket Teams",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sports/teams/cricket",
+              "host": ["{{base_url}}"],
+              "path": ["sports", "teams", "cricket"]
+            }
+          }
+        },
+        {
+          "name": "Get Cricket Standings",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sports/standings/cricket",
+              "host": ["{{base_url}}"],
+              "path": ["sports", "standings", "cricket"]
+            }
+          }
+        },
+        {
+          "name": "Get Cricket Matches (IPL)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sports/cricket/matches",
+              "host": ["{{base_url}}"],
+              "path": ["sports", "cricket", "matches"]
+            }
+          }
+        },
+        {
+          "name": "Search Team Details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sports/team/Lakers/details",
+              "host": ["{{base_url}}"],
+              "path": ["sports", "team", "Lakers", "details"]
+            }
+          }
+        },
+        {
+          "name": "Get All Leagues",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sports/leagues",
+              "host": ["{{base_url}}"],
+              "path": ["sports", "leagues"]
+            }
+          }
+        },
+        {
+          "name": "Search Player",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/sports/player/LeBron James/search",
+              "host": ["{{base_url}}"],
+              "path": ["sports", "player", "LeBron James", "search"]
+            }
+          }
+        },
+        {
+          "name": "Create Event from Sports Data",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gameId\": \"401547439\",\n  \"sport\": \"nfl\",\n  \"teams\": {\n    \"home\": \"New York Giants\",\n    \"away\": \"Dallas Cowboys\"\n  },\n  \"gameTime\": \"2025-02-01T18:00:00Z\",\n  \"venue\": \"MetLife Stadium\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/sports/create-event",
+              "host": ["{{base_url}}"],
+              "path": ["sports", "create-event"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
