@@ -1,128 +1,265 @@
 # Syncender
 
-A MERN stack application that allows users to track sports events and integrate them with their Google Calendar and Apple Calendar.
+A professional MERN stack application for sports calendar integration that allows users to track sports events and seamlessly sync them with Google Calendar and Apple Calendar.
 
-## Features
+## ✨ Features
 
-- User authentication (Register/Login)
-- Sports event tracking
-- Google Calendar integration
-- Apple Calendar integration (coming soon)
-- Event management
-- Team/Sport preferences
+- 🔐 **User Authentication** - Secure JWT-based auth with Google OAuth
+- 🏆 **Sports Event Management** - Create, read, update, delete sports events
+- 📅 **Google Calendar Integration** - Two-way sync with Google Calendar
+- 🍎 **Apple Calendar Support** - Generate and download ICS files
+- 👥 **Team & Match Tracking** - Follow your favorite teams and matches
+- 🔒 **Protected Routes** - Secure API endpoints with middleware protection
+- 🎯 **Professional Architecture** - Clean, maintainable code structure
 
-## Tech Stack
+## 🚀 Tech Stack
 
-- **Frontend**: React (coming soon)
-- **Backend**: Node.js, Express
-- **Database**: MongoDB
-- **Authentication**: JWT
-- **APIs**: Google Calendar API, Sports API (to be integrated)
+- **Frontend**: React 18, Material-UI, Vite
+- **Backend**: Node.js, Express.js, MongoDB
+- **Authentication**: JWT, Google OAuth 2.0
+- **Database**: MongoDB with Mongoose
+- **APIs**: Google Calendar API, Sports APIs
+- **Development**: Nodemon, ESLint, Error Handling
 
-## Prerequisites
+## 📋 Prerequisites
 
-- Node.js (v14 or higher)
-- MongoDB
+- Node.js (v16 or higher)
+- MongoDB (v4.4 or higher)
 - Google Cloud Platform account (for Google Calendar API)
-- Sports API account (to be determined)
+- npm or yarn package manager
 
-## Getting Started
+## 🛠️ Getting Started
 
-1. Clone the repository:
+### Backend Setup
+
+1. **Clone the repository:**
 ```bash
-git clone <repository-url>
-cd syncender
+git clone https://github.com/UtkarshNigam11/Syncender.git
+cd sports-calendar-integration
 ```
 
-2. Install backend dependencies:
+2. **Install backend dependencies:**
 ```bash
 cd backend
 npm install
 ```
 
-3. Create a `.env` file in the backend directory with the following variables:
+3. **Environment Configuration:**
+Create a `.env` file in the backend directory:
 ```env
+# Server Configuration
 PORT=5000
 NODE_ENV=development
+
+# Database
 MONGODB_URI=mongodb://localhost:27017/sports-calendar
-JWT_SECRET=your_jwt_secret_key_here
+
+# JWT Configuration
+JWT_SECRET=your_super_secure_jwt_secret_key_here
 JWT_EXPIRE=24h
 
 # Google Calendar API
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 GOOGLE_REDIRECT_URI=http://localhost:5000/api/auth/google/callback
-GOOGLE_REFRESH_TOKEN=your_google_refresh_token
 ```
 
-4. Start the backend server:
+4. **Start the backend server:**
+```bash
+npm run dev  # Development with nodemon
+# or
+npm start    # Production
+```
+
+### Frontend Setup
+
+1. **Install frontend dependencies:**
+```bash
+cd frontend
+npm install
+```
+
+2. **Start the frontend development server:**
 ```bash
 npm run dev
 ```
 
-## API Endpoints
+The frontend will be available at `http://localhost:3000` and backend at `http://localhost:5000`.
 
-### Authentication
+## 📚 API Endpoints
+
+### 🔐 Authentication
 - `POST /api/auth/register` - Register a new user
 - `POST /api/auth/login` - Login user
+- `GET /api/auth/google` - Initiate Google OAuth
 - `GET /api/auth/google/callback` - Google OAuth callback
 
-### Events
+### 📅 Events
 - `GET /api/events` - Get all events for authenticated user
 - `POST /api/events` - Create a new event
 - `GET /api/events/:id` - Get a specific event
 - `PUT /api/events/:id` - Update an event
 - `DELETE /api/events/:id` - Delete an event
+- `POST /api/events/:eventId/google` - Add event to Google Calendar
 
-### Sports
+### 🏆 Sports
 - `GET /api/sports/sports` - Get available sports
 - `GET /api/sports/matches/:sportId` - Get matches for a sport
 - `GET /api/sports/teams/:sportId` - Get teams for a sport
 - `GET /api/sports/matches/:sportId/:matchId` - Get match details
 
-## Development Status
+### 🍎 Apple Calendar
+- `POST /api/apple/calendar` - Generate and download ICS file
 
-### Backend
-- [x] Basic server setup
-- [x] Database models
-- [x] Authentication system
-- [x] Event management
-- [x] Route protection
-- [ ] Google Calendar integration (in progress)
-- [ ] Sports API integration
-- [ ] Apple Calendar integration
-- [ ] Testing
+## 🏗️ Project Structure
 
-### Frontend
-- [ ] Project setup
-- [ ] Authentication
-- [ ] Event management
-- [ ] Calendar integration
-- [ ] Sports data display
+```
+sports-calendar-integration/
+├── backend/
+│   ├── controllers/          # Business logic
+│   │   ├── eventController.js
+│   │   ├── appleController.js
+│   │   └── authController.js
+│   ├── middleware/           # Custom middleware
+│   │   ├── auth.js
+│   │   └── errorHandler.js
+│   ├── models/              # Database schemas
+│   │   ├── Event.js
+│   │   └── User.js
+│   ├── routes/              # API routes
+│   │   ├── eventRoutes.js
+│   │   ├── authRoutes.js
+│   │   ├── sportsRoutes.js
+│   │   └── appleRoutes.js
+│   ├── services/            # External service integrations
+│   │   └── googleCalendarService.js
+│   ├── utils/               # Utility functions
+│   │   └── icalHelper.js
+│   ├── config/              # Configuration files
+│   │   └── google.js
+│   ├── server.js            # Main server file
+│   └── package.json
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # React components
+│   │   ├── pages/          # Page components
+│   │   ├── context/        # React context
+│   │   └── App.jsx
+│   ├── package.json
+│   └── vite.config.js
+└── README.md
+```
 
-## Contributing
+## 📊 Development Status
 
-1. Create a new branch for your feature:
+### ✅ Backend (Completed)
+- [x] **Server Setup** - Express.js with middleware
+- [x] **Database Models** - User and Event schemas
+- [x] **Authentication System** - JWT + Google OAuth
+- [x] **Event Management** - Full CRUD operations
+- [x] **Route Protection** - Secure middleware
+- [x] **Google Calendar Integration** - Two-way sync
+- [x] **Apple Calendar Support** - ICS file generation
+- [x] **Error Handling** - Centralized error middleware
+- [x] **Input Validation** - Express-validator integration
+- [x] **Clean Architecture** - Controller-service pattern
+
+### 🚧 Frontend (In Progress)
+- [x] **Project Setup** - React + Vite + Material-UI
+- [x] **Authentication Context** - User state management
+- [x] **Protected Routes** - Route protection component
+- [x] **Basic Pages** - Login, Register, Dashboard, etc.
+- [ ] **Event Management UI** - Create/edit events interface
+- [ ] **Calendar Integration UI** - Google/Apple calendar connect
+- [ ] **Sports Data Display** - Teams, matches, standings
+- [ ] **Responsive Design** - Mobile-friendly interface
+
+### 🧪 Testing & Deployment
+- [ ] **Unit Tests** - Backend controller tests
+- [ ] **Integration Tests** - API endpoint tests
+- [ ] **Frontend Tests** - Component testing
+- [ ] **E2E Tests** - User flow testing
+- [ ] **Docker Setup** - Containerization
+- [ ] **CI/CD Pipeline** - Automated deployment
+
+## 🔧 Key Features Implemented
+
+### Backend Architecture
+- **Controller-Based Routing**: Clean separation of concerns
+- **Service Layer**: Centralized business logic for external APIs
+- **Middleware Stack**: Authentication, validation, error handling
+- **Database Integration**: MongoDB with Mongoose ODM
+
+### Calendar Integration
+- **Google Calendar**: OAuth 2.0 authentication and event sync
+- **Apple Calendar**: ICS file generation for seamless import
+- **Event Management**: Create, update, delete across platforms
+
+### Security & Validation
+- **JWT Authentication**: Secure token-based auth
+- **Input Validation**: Comprehensive request validation
+- **Error Handling**: Centralized error management
+- **Route Protection**: Middleware-based access control
+
+## 🤝 Contributing
+
+We welcome contributions! Please follow these steps:
+
+1. **Fork the repository**
+2. **Create a feature branch:**
 ```bash
 git checkout -b feature/your-feature-name
 ```
-
-2. Make your changes and commit them:
+3. **Make your changes and commit:**
 ```bash
-git commit -m "Add your feature description"
+git commit -m "feat: add your feature description"
 ```
-
-3. Push to your branch:
+4. **Push to your branch:**
 ```bash
 git push origin feature/your-feature-name
 ```
+5. **Create a Pull Request**
 
-4. Create a Pull Request
+### Development Guidelines
+- Follow existing code style and patterns
+- Add tests for new features
+- Update documentation as needed
+- Use semantic commit messages
 
-## Environment Variables
+## 🔐 Environment Variables
 
-Make sure to set up all required environment variables in your `.env` file. Never commit the `.env` file to version control.
+**Security Note**: Never commit the `.env` file to version control.
 
-## License
+Required environment variables:
+- `MONGODB_URI` - MongoDB connection string
+- `JWT_SECRET` - Secret key for JWT tokens
+- `GOOGLE_CLIENT_ID` - Google OAuth client ID
+- `GOOGLE_CLIENT_SECRET` - Google OAuth client secret
 
-This project is licensed under the MIT License. 
+## 🚀 Deployment
+
+### Backend Deployment
+1. Set up MongoDB Atlas or your preferred MongoDB hosting
+2. Configure environment variables on your hosting platform
+3. Deploy to platforms like Heroku, Vercel, or DigitalOcean
+
+### Frontend Deployment
+1. Build the frontend: `npm run build`
+2. Deploy to platforms like Netlify, Vercel, or AWS S3
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👨‍💻 Author
+
+**Utkarsh Nigam**
+- GitHub: [@UtkarshNigam11](https://github.com/UtkarshNigam11)
+- Project: [Syncender](https://github.com/UtkarshNigam11/Syncender)
+
+## 🙏 Acknowledgments
+
+- Google Calendar API for seamless calendar integration
+- Material-UI for beautiful React components
+- MongoDB for reliable data storage
+- Express.js for robust backend framework 

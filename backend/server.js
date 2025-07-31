@@ -27,16 +27,11 @@ mongoose.connect(process.env.MONGODB_URI)
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/events', require('./routes/eventRoutes'));
 app.use('/api/sports', require('./routes/sportsRoutes'));
+app.use('/api/apple', require('./routes/appleRoutes'));
 
 // Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    success: false,
-    message: 'Internal Server Error',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
+const errorHandler = require('./middleware/errorHandler');
+app.use(errorHandler);
 
 // Start server
 const PORT = process.env.PORT || 5000;
