@@ -113,6 +113,8 @@ The frontend will be available at `http://localhost:3000` and backend at `http:/
 
 ## 🏗️ Project Structure
 
+## 🏗️ Project Structure
+
 ```
 sports-calendar-integration/
 ├── backend/
@@ -246,6 +248,7 @@ Required environment variables:
 ### Frontend Deployment
 1. Build the frontend: `npm run build`
 2. Deploy to platforms like Netlify, Vercel, or AWS S3
+2. Deploy to platforms like Netlify, Vercel, or AWS S3
 
 ## 📄 License
 
@@ -262,4 +265,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Google Calendar API for seamless calendar integration
 - Material-UI for beautiful React components
 - MongoDB for reliable data storage
-- Express.js for robust backend framework 
+- Express.js for robust backend framework
