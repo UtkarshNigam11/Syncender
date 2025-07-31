@@ -3,8 +3,7 @@ const router = express.Router();
 const { protect } = require('../middleware/auth');
 const sportsController = require('../controllers/sportsController');
 
-// Apply auth middleware to all routes
-router.use(protect);
+// Auth middleware removed: all sports routes are now public
 
 // Get supported sports
 router.get('/sports', sportsController.getSports);

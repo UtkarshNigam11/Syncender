@@ -62,21 +62,77 @@ const Dashboard = () => {
           date: event.date,
         })) || [];
 
-        // Process cricket data
-        const cricketGames = cricketResponse.data.data?.slice(0, 2).map((event, index) => ({
-          id: `cricket-${index}`,
-          sport: 'Cricket',
-          homeTeam: event.strHomeTeam || 'Home Team',
-          awayTeam: event.strAwayTeam || 'Away Team',
-          status: event.strStatus || 'Scheduled',
-          venue: event.strVenue || 'TBD',
-          date: event.dateEvent,
-          time: event.strTime,
-          isLive: false, // Cricket API doesn't provide live status in this format
-        })) || [];
 
-        setLiveGames([...nflGames.filter(g => g.isLive)]);
-        setUpcomingGames([...nflGames.filter(g => !g.isLive), ...cricketGames].slice(0, 3));
+        // Major cricket leagues/events
+        const majorLeagues = [
+          'ICC Cricket World Cup',
+          'ICC T20 World Cup',
+          'ICC Champions Trophy',
+          'ICC World Test Championship',
+          'Indian Premier League',
+          'Big Bash League',
+          'Pakistan Super League',
+          'Caribbean Premier League',
+          'The Ashes',
+          'Asia Cup',
+          'Bangladesh Premier League',
+          'SA20',
+          'Lanka Premier League',
+          'Vitality Blast',
+          'Mzansi Super League',
+          'Global T20 Canada',
+          'Abu Dhabi T10',
+          'The Hundred',
+          'Super Smash',
+          'Zimbabwe Domestic T20',
+          'Afghanistan Premier League',
+          'Euro T20 Slam',
+          "Women's Big Bash League",
+          "Women's T20 Challenge",
+          "Women's Cricket World Cup",
+          "Women's T20 World Cup",
+        ];
+
+        // Helper to check if a match is live
+        const isCricketLive = (event) => {
+          const status = (event.strStatus || event.status || '').toLowerCase();
+          // Common live indicators
+          const liveIndicators = ['live', 'in progress', 'ongoing', '1st innings', '2nd innings', 'stumps', 'lunch', 'tea', 'rain delay'];
+          if (liveIndicators.some(ind => status.includes(ind))) return true;
+          // Fallback: check if current time is between start and end (if available)
+          if (event.dateEvent && event.strTime) {
+            const start = new Date(`${event.dateEvent}T${event.strTime}`);
+            const now = new Date();
+            // Assume a match lasts up to 8 hours
+            if (now >= start && now - start < 8 * 60 * 60 * 1000) return true;
+          }
+          return false;
+        };
+
+        // Filter and map cricket matches
+        const cricketMatchesRaw = cricketResponse.data.matches || cricketResponse.data.data || [];
+        const cricketGames = cricketMatchesRaw
+          .filter(event => majorLeagues.some(league => (event.strLeague || event.league || '').toLowerCase().includes(league.toLowerCase())))
+          .map((event, index) => ({
+            id: `cricket-${index}`,
+            sport: 'Cricket',
+            homeTeam: event.strHomeTeam || event.team1 || 'Home Team',
+            awayTeam: event.strAwayTeam || event.team2 || 'Away Team',
+            status: event.strStatus || event.status || 'Scheduled',
+            venue: event.strVenue || 'TBD',
+            date: event.dateEvent,
+            time: event.strTime,
+            isLive: isCricketLive(event),
+          }));
+
+        setLiveGames([
+          ...nflGames.filter(g => g.isLive),
+          ...cricketGames.filter(g => g.isLive)
+        ]);
+        setUpcomingGames([
+          ...nflGames.filter(g => !g.isLive),
+          ...cricketGames.filter(g => !g.isLive)
+        ].slice(0, 3));
         
       } catch (err) {
         console.error('Error fetching sports data:', err);

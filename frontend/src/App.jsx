@@ -10,6 +10,7 @@ import Sports from './pages/Sports';
 import Teams from './pages/Teams';
 import Matches from './pages/Matches';
 import Calendar from './pages/Calendar';
+import TestCricketMatch from './pages/TestCricketMatch';
 
 // Components
 import Navbar from './components/Navbar';
@@ -96,6 +97,7 @@ function App() {
                 <Route path="/teams/:sportId" element={<Teams />} />
                 <Route path="/matches" element={<Matches />} />
                 <Route path="/calendar" element={<Calendar />} />
+                <Route path="/test-cricket" element={<TestCricketMatch />} />
                 <Route path="/" element={<Navigate to="/dashboard" />} />
               </Routes>
             </Box>
