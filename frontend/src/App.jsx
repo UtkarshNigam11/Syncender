@@ -1,8 +1,11 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box } from '@mui/material';
+
+// Context
+import { CustomThemeProvider, useTheme } from './context/ThemeContext';
 
 // Pages
 import Dashboard from './pages/Dashboard';
@@ -16,72 +19,9 @@ import TestCricketMatch from './pages/TestCricketMatch';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#1565C0',
-      light: '#42A5F5',
-      dark: '#0D47A1',
-    },
-    secondary: {
-      main: '#FF5722',
-      light: '#FF8A65',
-      dark: '#D84315',
-    },
-    background: {
-      default: '#F5F7FA',
-      paper: '#FFFFFF',
-    },
-    text: {
-      primary: '#1A1A1A',
-      secondary: '#6B7280',
-    },
-  },
-  typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-    h4: {
-      fontWeight: 700,
-      letterSpacing: '-0.02em',
-    },
-    h5: {
-      fontWeight: 600,
-      letterSpacing: '-0.01em',
-    },
-    h6: {
-      fontWeight: 600,
-    },
-    button: {
-      textTransform: 'none',
-      fontWeight: 500,
-    },
-  },
-  shape: {
-    borderRadius: 12,
-  },
-  components: {
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          borderRadius: 16,
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-          border: '1px solid rgba(0, 0, 0, 0.04)',
-        },
-      },
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: 8,
-          padding: '8px 24px',
-          fontWeight: 500,
-        },
-      },
-    },
-  },
-});
+function AppContent() {
+  const { theme } = useTheme();
 
-function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -105,6 +45,14 @@ function App() {
         </Box>
       </Router>
     </ThemeProvider>
+  );
+}
+
+function App() {
+  return (
+    <CustomThemeProvider>
+      <AppContent />
+    </CustomThemeProvider>
   );
 }
 

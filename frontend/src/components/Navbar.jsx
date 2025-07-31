@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -16,11 +16,13 @@ import {
 import {
   Search as SearchIcon,
   Notifications as NotificationsIcon,
-  Settings as SettingsIcon,
+  DarkMode as DarkModeIcon,
+  LightMode as LightModeIcon,
   AccountCircle,
   CalendarToday,
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
+import { useTheme } from '../context/ThemeContext';
 
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
@@ -64,6 +66,7 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 const Navbar = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
+  const { isDarkMode, toggleDarkMode } = useTheme();
 
   const handleProfileMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -134,10 +137,17 @@ const Navbar = () => {
 
           <IconButton
             size="large"
-            aria-label="account settings"
+            aria-label="toggle dark mode"
             color="inherit"
+            onClick={toggleDarkMode}
+            sx={{ 
+              transition: 'transform 0.3s ease',
+              '&:hover': {
+                transform: 'rotate(20deg)',
+              }
+            }}
           >
-            <SettingsIcon />
+            {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
           </IconButton>
 
           <IconButton

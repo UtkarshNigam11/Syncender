@@ -1,0 +1,117 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createTheme } from '@mui/material/styles';
+
+const ThemeContext = createContext();
+
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  return context;
+};
+
+export const CustomThemeProvider = ({ children }) => {
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
+  };
+
+  const lightTheme = createTheme({
+    palette: {
+      mode: 'light',
+      primary: {
+        main: '#1565C0',
+        light: '#42A5F5',
+        dark: '#0D47A1',
+      },
+      secondary: {
+        main: '#FF5722',
+        light: '#FF8A65',
+        dark: '#D84315',
+      },
+      background: {
+        default: '#f5f5f5',
+        paper: '#ffffff',
+      },
+    },
+    components: {
+      MuiAppBar: {
+        styleOverrides: {
+          root: {
+            background: 'linear-gradient(45deg, #1565C0 30%, #42A5F5 90%)',
+          },
+        },
+      },
+    },
+  });
+
+  const darkTheme = createTheme({
+    palette: {
+      mode: 'dark',
+      primary: {
+        main: '#42A5F5',
+        light: '#90CAF9',
+        dark: '#1565C0',
+      },
+      secondary: {
+        main: '#FF7043',
+        light: '#FFAB91',
+        dark: '#D84315',
+      },
+      background: {
+        default: '#121212',
+        paper: '#1e1e1e',
+      },
+      text: {
+        primary: '#ffffff',
+        secondary: '#b0b0b0',
+      },
+    },
+    components: {
+      MuiAppBar: {
+        styleOverrides: {
+          root: {
+            background: 'linear-gradient(45deg, #1e1e1e 30%, #333333 90%)',
+          },
+        },
+      },
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            backgroundColor: '#2a2a2a',
+            borderColor: '#404040',
+          },
+        },
+      },
+      MuiChip: {
+        styleOverrides: {
+          root: {
+            '&.MuiChip-colorError': {
+              backgroundColor: '#d32f2f',
+              color: '#ffffff',
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const theme = isDarkMode ? darkTheme : lightTheme;
+
+  return (
+    <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode, theme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+};
+
+export { ThemeContext };

@@ -27,6 +27,7 @@ import {
   Schedule,
   Add,
   MoreVert,
+  EventAvailable,
 } from '@mui/icons-material';
 
 const Dashboard = () => {
@@ -35,6 +36,49 @@ const Dashboard = () => {
   const [upcomingGames, setUpcomingGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  // Function to add match to calendar
+  const addToCalendar = async (game) => {
+    try {
+      const eventData = {
+        title: `${game.awayTeam} vs ${game.homeTeam}`,
+        description: `${game.sport} match - ${game.league || game.sport}`,
+        venue: game.venue || 'TBD',
+        startDate: game.date,
+        startTime: game.time || '10:00',
+        sport: game.sport,
+        teams: [game.homeTeam, game.awayTeam]
+      };
+
+      // You can implement Google Calendar integration here
+      // For now, create a calendar file download
+      const calendarEvent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Sports Calendar//EN
+BEGIN:VEVENT
+SUMMARY:${eventData.title}
+DTSTART:${eventData.startDate?.replace(/-/g, '')}T${eventData.startTime?.replace(/:/g, '')}00Z
+DESCRIPTION:${eventData.description}
+LOCATION:${eventData.venue}
+END:VEVENT
+END:VCALENDAR`;
+
+      const blob = new Blob([calendarEvent], { type: 'text/calendar' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${game.awayTeam}_vs_${game.homeTeam}.ics`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      alert('Match added to calendar! Check your downloads folder.');
+    } catch (error) {
+      console.error('Error adding to calendar:', error);
+      alert('Failed to add match to calendar.');
+    }
+  };
 
   // Fetch real sports data
   useEffect(() => {
@@ -122,7 +166,9 @@ const Dashboard = () => {
             venue: event.strVenue || 'TBD',
             date: event.dateEvent,
             time: event.strTime,
+            league: event.strLeague || event.leagueInfo?.name || 'Cricket',
             isLive: isCricketLive(event),
+            isUpcoming: !isCricketLive(event) && new Date(event.dateEvent) > new Date(),
           }));
 
         setLiveGames([
@@ -180,7 +226,7 @@ const Dashboard = () => {
           Sports Dashboard
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Track live games, upcoming matches, and manage your sports calendar
+          Track ongoing matches, upcoming fixtures, and manage your sports calendar
         </Typography>
       </Box>
 
@@ -212,7 +258,7 @@ const Dashboard = () => {
                       <Typography variant="h3" sx={{ fontWeight: 800, mb: 1 }}>
                         {liveGames.length}
                       </Typography>
-                      <Typography variant="body2">Live Games</Typography>
+                      <Typography variant="body2">Ongoing</Typography>
                     </Box>
                     <TrendingUp sx={{ fontSize: 40, opacity: 0.8 }} />
                   </Box>
@@ -288,13 +334,13 @@ const Dashboard = () => {
           </Grid>
 
       <Grid container spacing={3}>
-        {/* Live Games */}
-        <Grid item xs={12} lg={8}>
+        {/* Ongoing Matches */}
+        <Grid item xs={12} lg={6}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  Live Games 🔴
+                  Ongoing Matches 
                 </Typography>
                 <Button 
                   variant="outlined" 
@@ -309,7 +355,7 @@ const Dashboard = () => {
                 {liveGames.length === 0 ? (
                   <Box sx={{ textAlign: 'center', py: 4 }}>
                     <Typography variant="body1" color="text.secondary">
-                      No live games at the moment
+                      No ongoing matches at the moment
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Check upcoming games or explore sports leagues
@@ -362,24 +408,19 @@ const Dashboard = () => {
                             <Typography variant="body2" color="text.secondary">
                               {game.sport} • {game.status}
                             </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              {game.venue || 'Venue TBD'} • {game.league || game.sport}
+                            </Typography>
                           </Box>
                         </Box>
                         
                         <Box sx={{ textAlign: 'right' }}>
-                          <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-                            {game.awayScore} - {game.homeScore}
-                          </Typography>
                           <Button 
                             size="small" 
-                            variant="contained"
-                            onClick={() => navigate('/calendar')}
-                            sx={{ 
-                              backgroundColor: getSportColor(game.sport),
-                              '&:hover': {
-                                backgroundColor: getSportColor(game.sport),
-                                opacity: 0.8,
-                              },
-                            }}
+                            variant="outlined"
+                            startIcon={<EventAvailable />}
+                            onClick={() => addToCalendar(game)}
+                            sx={{ mb: 1 }}
                           >
                             Add to Calendar
                           </Button>
@@ -394,7 +435,7 @@ const Dashboard = () => {
         </Grid>
 
         {/* Upcoming Games */}
-        <Grid item xs={12} lg={4}>
+        <Grid item xs={12} lg={6}>
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
@@ -451,9 +492,10 @@ const Dashboard = () => {
                         <Button 
                           size="small" 
                           variant="outlined"
-                          onClick={() => navigate('/calendar')}
+                          startIcon={<EventAvailable />}
+                          onClick={() => addToCalendar(game)}
                         >
-                          Add
+                          Add to Calendar
                         </Button>
                       </Box>
                     </Card>
