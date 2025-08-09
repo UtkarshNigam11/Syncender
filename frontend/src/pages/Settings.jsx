@@ -27,10 +27,11 @@ const Settings = () => {
 
   const load = async () => {
     setMessage(''); setError('');
+    if (!token) return; // avoid requests when not authenticated
     const data = await getSubscription();
     setSub(data);
     try {
-      const res = await axios.get('http://localhost:5000/api/users/me', { headers: { Authorization: `Bearer ${token}` }});
+      const res = await axios.get('/api/users/me');
       setMe(res.data);
     } catch (e) {}
   };
@@ -40,7 +41,7 @@ const Settings = () => {
   const savePreferences = async (patch) => {
     try {
       const next = { preferences: patch };
-      await axios.put('http://localhost:5000/api/users/me', next, { headers: { Authorization: `Bearer ${token}` }});
+      await axios.put('/api/users/me', next);
       await load();
       setMessage('Preferences updated');
     } catch {
@@ -50,14 +51,14 @@ const Settings = () => {
 
   const connectGoogle = async () => {
     try {
-      const { data } = await axios.get('http://localhost:5000/api/auth/google');
+      const { data } = await axios.get('/api/auth/google');
       window.location.href = data.authUrl;
     } catch { setError('Failed to start Google auth'); }
   };
 
   const upgrade = async () => {
     try {
-      await axios.post('http://localhost:5000/api/subscription/upgrade', { plan: 'pro' }, { headers: { Authorization: `Bearer ${token}` }});
+      await axios.post('/api/subscription/upgrade', { plan: 'pro' });
       await load();
       setMessage('Upgraded to Pro');
     } catch { setError('Upgrade failed'); }
@@ -110,7 +111,10 @@ const Settings = () => {
         {activeTab === 1 && (
           <>
             <Section title="Plan" description="Your subscription details and benefits.">
-              <Typography sx={{ mb: 1 }}>Current plan: <Chip label={(sub?.plan || 'free').toUpperCase()} color={sub?.plan === 'pro' ? 'success' : 'default'} /></Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <Typography sx={{ m: 0 }}>Current plan:</Typography>
+                <Chip label={(sub?.plan || 'free').toUpperCase()} color={sub?.plan === 'pro' ? 'success' : 'default'} />
+              </Box>
               <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Limit: Follow up to {limit} teams.</Typography>
               {sub?.plan !== 'pro' && (
                 <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>

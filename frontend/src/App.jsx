@@ -6,7 +6,7 @@ import { Box } from '@mui/material';
 
 // Context
 import { CustomThemeProvider, useTheme } from './context/ThemeContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, AuthContext } from './context/AuthContext';
 
 // Pages
 import Dashboard from './pages/Dashboard';
@@ -23,21 +23,25 @@ import Profile from './pages/Profile';
 // Components
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
+import PrivateRoute from './components/PrivateRoute';
 
 function OAuthHandler() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { loginWithToken } = React.useContext(AuthContext);
 
   React.useEffect(() => {
     const params = new URLSearchParams(location.search);
     const token = params.get('token');
     if (token) {
-      localStorage.setItem('token', token);
-      navigate('/dashboard', { replace: true });
+      // Use AuthContext to persist and set default headers
+      loginWithToken(token).then(() => {
+        navigate('/dashboard', { replace: true });
+      });
     } else {
       navigate('/login', { replace: true });
     }
-  }, [location, navigate]);
+  }, [location, navigate, loginWithToken]);
 
   return null;
 }
@@ -49,7 +53,8 @@ function AppContent() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        <Router>
+        {/* Opt-in to v7 behavior to silence warnings */}
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Box sx={{ display: 'flex', minHeight: '100vh' }}>
             <Sidebar />
             <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
@@ -64,8 +69,8 @@ function AppContent() {
                   <Route path="/test-cricket" element={<TestCricketMatch />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+                  <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
                   <Route path="/auth/google/callback" element={<OAuthHandler />} />
                   <Route path="/" element={<Navigate to="/dashboard" />} />
                 </Routes>
