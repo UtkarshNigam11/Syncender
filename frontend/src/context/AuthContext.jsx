@@ -39,18 +39,19 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, [token]);
 
-  // Login user
+  // Helper to persist token
+  const setAuthToken = (jwt) => {
+    localStorage.setItem('token', jwt);
+    setToken(jwt);
+    axios.defaults.headers.common['Authorization'] = `Bearer ${jwt}`;
+  };
+
+  // Login user with email/password
   const login = async (email, password) => {
     try {
       const res = await axios.post('http://localhost:5000/api/auth/login', { email, password });
-      const { token } = res.data;
-      
-      // Save token to localStorage
-      localStorage.setItem('token', token);
-      
-      // Set token in state
-      setToken(token);
-      
+      const { token: jwt } = res.data;
+      setAuthToken(jwt);
       return { success: true };
     } catch (error) {
       console.error('Login error:', error.response?.data || error.message);
@@ -61,15 +62,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Register user
-  const register = async (name, email, password) => {
+  // Register user (accepts either (name,email,password) or an object)
+  const register = async (nameOrData, email, password) => {
     try {
-      const res = await axios.post('http://localhost:5000/api/auth/register', { 
-        name, 
-        email, 
-        password 
-      });
-      
+      const payload = typeof nameOrData === 'object'
+        ? nameOrData
+        : { name: nameOrData, email, password };
+
+      await axios.post('http://localhost:5000/api/auth/register', payload);
       return { success: true };
     } catch (error) {
       console.error('Register error:', error.response?.data || error.message);
@@ -77,6 +77,28 @@ export const AuthProvider = ({ children }) => {
         success: false, 
         message: error.response?.data?.message || 'Registration failed' 
       };
+    }
+  };
+
+  // Start Google OAuth: returns authUrl
+  const googleAuth = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/auth/google');
+      return res.data.authUrl;
+    } catch (error) {
+      console.error('Google auth error:', error.response?.data || error.message);
+      return null;
+    }
+  };
+
+  // Complete OAuth by storing token from callback
+  const loginWithToken = async (jwt) => {
+    try {
+      if (!jwt) throw new Error('Missing token');
+      setAuthToken(jwt);
+      return { success: true };
+    } catch (e) {
+      return { success: false, message: e.message };
     }
   };
 
@@ -95,7 +117,9 @@ export const AuthProvider = ({ children }) => {
       loading, 
       login, 
       register, 
-      logout 
+      logout,
+      googleAuth,
+      loginWithToken,
     }}>
       {children}
     </AuthContext.Provider>

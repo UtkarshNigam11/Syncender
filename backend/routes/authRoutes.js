@@ -6,6 +6,9 @@ const User = require('../models/User');
 const { google } = require('googleapis');
 const { oauth2Client } = require('../config/google');
 
+// Frontend base URL for redirects
+const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
+
 // Validation middleware
 const validateRegistration = [
   body('email').isEmail().withMessage('Please enter a valid email'),
@@ -162,33 +165,19 @@ router.get('/google/callback', async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user._id },
+      { userId: user._id, email: user.email, name: user.name },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRE }
     );
 
-    // For testing, you can also return the token directly
-    // Remove this in production and use the redirect instead
-    res.json({
-      success: true,
-      message: 'Google OAuth successful',
-      token,
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email
-      }
-    });
-
-    // TODO: Uncomment this when frontend is ready
-    // res.redirect(`http://localhost:3000/auth/google/callback?token=${token}`);
+    // Redirect to frontend with token
+    const redirectUrl = `${CLIENT_URL}/auth/google/callback?token=${encodeURIComponent(token)}`;
+    return res.redirect(302, redirectUrl);
   } catch (error) {
     console.error('Google OAuth error:', error);
-    res.status(500).json({ 
-      success: false,
-      message: 'Google OAuth failed',
-      error: error.message 
-    });
+    // Redirect with error message
+    const errorUrl = `${CLIENT_URL}/login?error=${encodeURIComponent('Google OAuth failed')}`;
+    return res.redirect(302, errorUrl);
   }
 });
 
@@ -197,12 +186,15 @@ router.get('/google', (req, res) => {
   try {
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline',
+      response_type: 'code',
+      include_granted_scopes: true,
       scope: [
         'https://www.googleapis.com/auth/calendar',
         'https://www.googleapis.com/auth/userinfo.email',
         'https://www.googleapis.com/auth/userinfo.profile'
       ],
-      prompt: 'consent'  // This ensures we always get a refresh token
+      prompt: 'consent',
+      redirect_uri: process.env.GOOGLE_REDIRECT_URI,
     });
     res.json({ authUrl });
   } catch (error) {
@@ -215,4 +207,4 @@ router.get('/google', (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;

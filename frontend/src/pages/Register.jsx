@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Container, Typography, TextField, Button, Box, Paper, Grid } from '@mui/material';
+import { Container, Typography, TextField, Button, Box, Paper, Grid, Alert } from '@mui/material';
 import { AuthContext } from '../context/AuthContext';
 
 const Register = () => {
@@ -20,15 +20,24 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
     try {
-      await register(formData);
-      navigate('/login');
+      const res = await register({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      });
+      if (res?.success) {
+        navigate('/login');
+      } else {
+        setError(res?.message || 'Registration failed');
+      }
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      setError('Registration failed');
     }
   };
 
@@ -39,9 +48,9 @@ const Register = () => {
           Register
         </Typography>
         {error && (
-          <Typography color="error" align="center" gutterBottom>
+          <Alert severity="error" sx={{ mb: 2 }}>
             {error}
-          </Typography>
+          </Alert>
         )}
         <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
           <TextField

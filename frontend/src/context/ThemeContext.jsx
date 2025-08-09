@@ -44,10 +44,11 @@ export const CustomThemeProvider = ({ children }) => {
       },
     },
     components: {
+      // Remove global AppBar background override to ensure proper contrast when using color="default"
       MuiAppBar: {
         styleOverrides: {
           root: {
-            background: 'linear-gradient(45deg, #1565C0 30%, #42A5F5 90%)',
+            background: undefined,
           },
         },
       },
@@ -77,10 +78,11 @@ export const CustomThemeProvider = ({ children }) => {
       },
     },
     components: {
+      // Remove global AppBar background override for dark as well
       MuiAppBar: {
         styleOverrides: {
           root: {
-            background: 'linear-gradient(45deg, #1e1e1e 30%, #333333 90%)',
+            background: undefined,
           },
         },
       },

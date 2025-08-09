@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -27,9 +27,15 @@ import { useTheme } from '../context/ThemeContext';
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
   borderRadius: theme.shape.borderRadius,
-  backgroundColor: alpha(theme.palette.common.white, 0.15),
+  backgroundColor:
+    theme.palette.mode === 'dark'
+      ? alpha(theme.palette.common.white, 0.08)
+      : alpha(theme.palette.grey[900], 0.06),
   '&:hover': {
-    backgroundColor: alpha(theme.palette.common.white, 0.25),
+    backgroundColor:
+      theme.palette.mode === 'dark'
+        ? alpha(theme.palette.common.white, 0.12)
+        : alpha(theme.palette.grey[900], 0.12),
   },
   marginRight: theme.spacing(2),
   marginLeft: 0,
@@ -48,10 +54,11 @@ const SearchIconWrapper = styled('div')(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
+  color: theme.palette.text.secondary,
 }));
 
 const StyledInputBase = styled(InputBase)(({ theme }) => ({
-  color: 'inherit',
+  color: theme.palette.text.primary,
   '& .MuiInputBase-input': {
     padding: theme.spacing(1, 1, 1, 0),
     paddingLeft: `calc(1em + ${theme.spacing(4)})`,
@@ -82,32 +89,36 @@ const Navbar = () => {
   };
 
   return (
-    <AppBar 
-      position="static" 
+    <AppBar
+      position="static"
+      color="default"
       elevation={0}
-      sx={{ 
-        backgroundColor: 'background.paper',
+      sx={{
         borderBottom: '1px solid',
         borderColor: 'divider',
-        color: 'text.primary'
       }}
     >
       <Toolbar>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <CalendarToday sx={{ color: 'primary.main' }} />
-          <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
+          <CalendarToday sx={{ color: 'primary.main', flexShrink: 0 }} />
+          <Typography
+            variant="h6"
+            noWrap
+            sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1, maxWidth: { xs: 140, sm: 220, md: 280 } }}
+            title="SportsCalendar"
+          >
             SportsCalendar
           </Typography>
-          <Chip 
-            label="Pro" 
-            size="small" 
-            sx={{ 
-              backgroundColor: 'secondary.main', 
-              color: 'white',
+          <Chip
+            label="Pro"
+            size="small"
+            sx={{
+              backgroundColor: 'secondary.main',
+              color: 'common.white',
               height: 20,
               fontSize: '0.7rem',
-              fontWeight: 600
-            }} 
+              fontWeight: 600,
+            }}
           />
         </Box>
 
@@ -140,11 +151,11 @@ const Navbar = () => {
             aria-label="toggle dark mode"
             color="inherit"
             onClick={toggleDarkMode}
-            sx={{ 
-              transition: 'transform 0.3s ease',
+            sx={{
+              transition: 'transform 0.2s ease',
               '&:hover': {
-                transform: 'rotate(20deg)',
-              }
+                transform: 'rotate(12deg)',
+              },
             }}
           >
             {isDarkMode ? <LightModeIcon /> : <DarkModeIcon />}
@@ -158,7 +169,7 @@ const Navbar = () => {
             onClick={handleProfileMenuOpen}
             color="inherit"
           >
-            <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+            <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', color: 'primary.contrastText' }}>
               <AccountCircle />
             </Avatar>
           </IconButton>

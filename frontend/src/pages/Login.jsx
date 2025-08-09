@@ -8,8 +8,11 @@ import {
   TextField,
   Button,
   Alert,
-  Paper
+  Paper,
+  Stack,
+  Divider
 } from '@mui/material';
+import GoogleIcon from '@mui/icons-material/Google';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -17,7 +20,7 @@ const Login = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
-  const { login } = useContext(AuthContext);
+  const { login, googleAuth } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -41,6 +44,20 @@ const Login = () => {
     }
   };
 
+  const handleGoogle = async () => {
+    setError('');
+    try {
+      const authUrl = await googleAuth();
+      if (authUrl) {
+        window.location.href = authUrl;
+      } else {
+        setError('Failed to start Google authentication');
+      }
+    } catch (e) {
+      setError('Failed to start Google authentication');
+    }
+  };
+
   return (
     <Container maxWidth="sm">
       <Box sx={{ mt: 8 }}>
@@ -51,40 +68,54 @@ const Login = () => {
           
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
           
-          <Box component="form" onSubmit={handleSubmit} noValidate>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email Address"
-              name="email"
-              autoComplete="email"
-              autoFocus
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Password"
-              type="password"
-              id="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+          <Stack spacing={2}>
             <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
-              disabled={loading}
+              variant="outlined"
+              startIcon={<GoogleIcon />}
+              onClick={handleGoogle}
+              sx={{ textTransform: 'none' }}
             >
-              {loading ? 'Logging in...' : 'Login'}
+              Continue with Google
             </Button>
+
+            <Divider>or</Divider>
+
+            <Box component="form" onSubmit={handleSubmit} noValidate>
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                id="email"
+                label="Email Address"
+                name="email"
+                autoComplete="email"
+                autoFocus
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              <TextField
+                margin="normal"
+                required
+                fullWidth
+                name="password"
+                label="Password"
+                type="password"
+                id="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <Button
+                type="submit"
+                fullWidth
+                variant="contained"
+                sx={{ mt: 2 }}
+                disabled={loading}
+              >
+                {loading ? 'Logging in...' : 'Login'}
+              </Button>
+            </Box>
+
             <Box sx={{ textAlign: 'center' }}>
               <Link to="/register" style={{ textDecoration: 'none' }}>
                 <Typography variant="body2" color="primary">
@@ -92,7 +123,7 @@ const Login = () => {
                 </Typography>
               </Link>
             </Box>
-          </Box>
+          </Stack>
         </Paper>
       </Box>
     </Container>

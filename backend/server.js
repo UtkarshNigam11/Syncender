@@ -13,7 +13,15 @@ const app = express();
 
 // Middleware
 app.use(helmet()); // Security headers
-app.use(cors()); // Enable CORS
+
+// Configure CORS to allow only the frontend origin
+const corsOptions = {
+  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+app.use(cors(corsOptions));
+
 app.use(morgan('dev')); // Logging
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
@@ -37,4 +45,4 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
-}); 
+});
