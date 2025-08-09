@@ -21,6 +21,20 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Name is required'],
     trim: true
   },
+  // Subscription/plan information
+  plan: {
+    type: String,
+    enum: ['free', 'pro'],
+    default: 'free',
+  },
+  planStatus: {
+    type: String,
+    enum: ['active', 'canceled', 'expired'],
+    default: 'active',
+  },
+  planStartedAt: Date,
+  planExpiresAt: Date,
+
   googleCalendarToken: {
     accessToken: String,
     refreshToken: String,
@@ -32,12 +46,21 @@ const userSchema = new mongoose.Schema({
     expiryDate: Date
   },
   preferences: {
-    favoriteTeams: [String],
-    favoriteSports: [String],
+    favoriteTeams: { type: [String], default: [] },
+    favoriteSports: { type: [String], default: [] },
     timezone: {
       type: String,
       default: 'UTC'
-    }
+    },
+    notifications: {
+      matchReminders: { type: Boolean, default: true },
+      newsUpdates: { type: Boolean, default: false },
+      emailAlerts: { type: Boolean, default: false },
+    },
+    appearance: {
+      darkMode: { type: Boolean, default: false },
+      density: { type: String, enum: ['comfortable', 'compact'], default: 'comfortable' },
+    },
   },
   createdAt: {
     type: Date,
@@ -63,4 +86,4 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-module.exports = mongoose.model('User', userSchema); 
+module.exports = mongoose.model('User', userSchema);

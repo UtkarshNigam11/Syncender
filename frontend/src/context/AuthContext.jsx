@@ -110,6 +110,26 @@ export const AuthProvider = ({ children }) => {
     delete axios.defaults.headers.common['Authorization'];
   };
 
+  // Update user profile
+  const updateUser = async (payload) => {
+    try {
+      const res = await axios.put('http://localhost:5000/api/users/me', payload);
+      return { success: true, data: res.data };
+    } catch (e) {
+      return { success: false, message: e.response?.data?.message || 'Update failed' };
+    }
+  };
+
+  // Fetch subscription status
+  const getSubscription = async () => {
+    try {
+      const res = await axios.get('http://localhost:5000/api/subscription');
+      return res.data;
+    } catch (e) {
+      return null;
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -120,6 +140,8 @@ export const AuthProvider = ({ children }) => {
       logout,
       googleAuth,
       loginWithToken,
+      updateUser,
+      getSubscription,
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -12,6 +12,7 @@ import {
   Chip,
   InputBase,
   alpha,
+  Tooltip,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -23,6 +24,8 @@ import {
 } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 import { useTheme } from '../context/ThemeContext';
+import { AuthContext } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
@@ -64,9 +67,6 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
     paddingLeft: `calc(1em + ${theme.spacing(4)})`,
     transition: theme.transitions.create('width'),
     width: '100%',
-    [theme.breakpoints.up('md')]: {
-      width: '20ch',
-    },
   },
 }));
 
@@ -74,6 +74,8 @@ const Navbar = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
   const { isDarkMode, toggleDarkMode } = useTheme();
+  const { user, logout } = useContext(AuthContext);
+  const navigate = useNavigate();
 
   const handleProfileMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -87,6 +89,27 @@ const Navbar = () => {
     setAnchorEl(null);
     setNotificationAnchorEl(null);
   };
+
+  const goTo = (path) => {
+    navigate(path);
+    handleMenuClose();
+  };
+
+  const handleLogout = () => {
+    logout();
+    handleMenuClose();
+    navigate('/login');
+  };
+
+  const getInitials = (s) => {
+    if (!s) return 'U';
+    const parts = s.replace(/[^a-zA-Z ]/g, '').trim().split(' ').filter(Boolean);
+    if (parts.length === 0) return s[0]?.toUpperCase() || 'U';
+    return (parts[0][0] + (parts[1]?.[0] || '')).toUpperCase();
+  };
+
+  const avatarLabel = user?.name || user?.email || 'User';
+  const avatarText = getInitials(user?.name || user?.email);
 
   return (
     <AppBar
@@ -122,15 +145,18 @@ const Navbar = () => {
           />
         </Box>
 
-        <Search>
-          <SearchIconWrapper>
-            <SearchIcon />
-          </SearchIconWrapper>
-          <StyledInputBase
-            placeholder="Search teams, players, matches..."
-            inputProps={{ 'aria-label': 'search' }}
-          />
-        </Search>
+        {/* Make search grow and have a reasonable max width */}
+        <Box sx={{ flex: 1, maxWidth: { xs: '100%', sm: 420, md: 560 }, mx: 2 }}>
+          <Search>
+            <SearchIconWrapper>
+              <SearchIcon />
+            </SearchIconWrapper>
+            <StyledInputBase
+              placeholder="Search teams, players, matches..."
+              inputProps={{ 'aria-label': 'search' }}
+            />
+          </Search>
+        </Box>
 
         <Box sx={{ flexGrow: 1 }} />
 
@@ -169,9 +195,20 @@ const Navbar = () => {
             onClick={handleProfileMenuOpen}
             color="inherit"
           >
-            <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', color: 'primary.contrastText' }}>
-              <AccountCircle />
-            </Avatar>
+            <Tooltip title={avatarLabel} arrow>
+              <Avatar sx={{
+                width: 36,
+                height: 36,
+                bgcolor: isDarkMode ? 'primary.dark' : 'primary.main',
+                color: 'primary.contrastText',
+                border: '2px solid',
+                borderColor: isDarkMode ? 'primary.light' : 'primary.light',
+                fontWeight: 700,
+                fontSize: 14,
+              }}>
+                {avatarText}
+              </Avatar>
+            </Tooltip>
           </IconButton>
         </Box>
 
@@ -190,10 +227,10 @@ const Navbar = () => {
           open={Boolean(anchorEl)}
           onClose={handleMenuClose}
         >
-          <MenuItem onClick={handleMenuClose}>Profile</MenuItem>
-          <MenuItem onClick={handleMenuClose}>My Calendar</MenuItem>
-          <MenuItem onClick={handleMenuClose}>Settings</MenuItem>
-          <MenuItem onClick={handleMenuClose}>Logout</MenuItem>
+          <MenuItem onClick={() => goTo('/profile')}>Profile</MenuItem>
+          <MenuItem onClick={() => goTo('/calendar')}>My Calendar</MenuItem>
+          <MenuItem onClick={() => goTo('/settings')}>Settings</MenuItem>
+          <MenuItem onClick={handleLogout}>Logout</MenuItem>
         </Menu>
 
         <Menu

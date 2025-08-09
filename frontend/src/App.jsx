@@ -17,6 +17,8 @@ import Calendar from './pages/Calendar';
 import TestCricketMatch from './pages/TestCricketMatch';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Settings from './pages/Settings';
+import Profile from './pages/Profile';
 
 // Components
 import Navbar from './components/Navbar';
@@ -62,6 +64,8 @@ function AppContent() {
                   <Route path="/test-cricket" element={<TestCricketMatch />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/profile" element={<Profile />} />
                   <Route path="/auth/google/callback" element={<OAuthHandler />} />
                   <Route path="/" element={<Navigate to="/dashboard" />} />
                 </Routes>

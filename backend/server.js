@@ -36,6 +36,8 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/events', require('./routes/eventRoutes'));
 app.use('/api/sports', require('./routes/sportsRoutes'));
 app.use('/api/apple', require('./routes/appleRoutes'));
+app.use('/api/subscription', require('./routes/subscriptionRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
 
 // Error handling middleware
 const errorHandler = require('./middleware/errorHandler');
