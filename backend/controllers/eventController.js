@@ -21,7 +21,7 @@ exports.createEvent = async (req, res) => {
       endTime,
       sport,
       teams,
-      location,
+      location: location, // Explicitly set location
       user: req.user.userId,
       source: 'manual'
     });
@@ -30,20 +30,26 @@ exports.createEvent = async (req, res) => {
 
     // Try to add to Google Calendar if user has connected it
     const user = await User.findById(req.user.userId);
-    if (user && user.googleCalendarToken) {
+    if (user && user.googleCalendarToken && user.googleCalendarToken.accessToken) {
       try {
         const googleEventId = await googleCalendarService.createGoogleCalendarEvent(user, newEvent);
         newEvent.googleCalendarEventId = googleEventId;
         await newEvent.save();
       } catch (error) {
         console.error('Error adding to Google Calendar:', error);
-        // Continue without Google Calendar integration
+        // Continue without Google Calendar integration if it fails
+        // Don't throw error to ensure event is still saved locally
       }
+    } else {
+      console.log('User has not connected Google Calendar or token is missing');
     }
     
     res.status(201).json({
       success: true,
-      data: newEvent
+      data: newEvent,
+      message: user && user.googleCalendarToken ? 
+        'Event created and added to Google Calendar' : 
+        'Event created locally. Connect Google Calendar in your profile to sync events.'
     });
   } catch (error) {
     console.error('Error creating event:', error);

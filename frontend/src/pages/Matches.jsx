@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import {
   Container,
   Typography,
@@ -48,6 +49,25 @@ const Matches = () => {
   });
   const [favorites, setFavorites] = useState(new Set());
   const [anchorEl, setAnchorEl] = useState(null);
+  const [calendarMenuEl, setCalendarMenuEl] = useState(null);
+  const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
+
+  // Helper function to convert 12-hour time to 24-hour format
+  const convertTo24Hour = (time12h) => {
+    if (!time12h) return '19:00:00';
+    
+    const [time, period] = time12h.split(' ');
+    const [hours, minutes] = time.split(':');
+    let hour24 = parseInt(hours);
+    
+    if (period === 'PM' && hour24 !== 12) {
+      hour24 += 12;
+    } else if (period === 'AM' && hour24 === 12) {
+      hour24 = 0;
+    }
+    
+    return `${hour24.toString().padStart(2, '0')}:${(minutes || '00').padStart(2, '0')}:00`;
+  };
 
   useEffect(() => {
     // Mock data for different match states
@@ -58,36 +78,30 @@ const Matches = () => {
           sport: 'NBA',
           homeTeam: 'Lakers',
           awayTeam: 'Warriors',
-          homeScore: 98,
-          awayScore: 102,
-          quarter: '4th Quarter',
-          time: '2:15',
           venue: 'Staples Center',
           isLive: true,
+          date: '2025-08-10',
+          time: '09:00 PM',
         },
         {
           id: 2,
           sport: 'Cricket',
           homeTeam: 'India',
           awayTeam: 'Australia',
-          homeScore: '287/6',
-          awayScore: '45.2 overs',
-          quarter: 'Live',
-          time: '',
           venue: 'MCG, Melbourne',
           isLive: true,
+          date: '2025-08-10',
+          time: '08:30 PM',
         },
         {
           id: 3,
           sport: 'NFL',
           homeTeam: 'Cowboys',
           awayTeam: 'Giants',
-          homeScore: 21,
-          awayScore: 14,
-          quarter: '3rd Quarter',
-          time: '8:42',
           venue: 'AT&T Stadium',
           isLive: true,
+          date: '2025-08-10',
+          time: '10:00 PM',
         },
       ],
       today: [
@@ -96,7 +110,7 @@ const Matches = () => {
           sport: 'NBA',
           homeTeam: 'Heat',
           awayTeam: 'Celtics',
-          date: 'Today',
+          date: '2025-08-10',
           time: '8:00 PM',
           venue: 'Madison Square Garden',
         },
@@ -105,7 +119,7 @@ const Matches = () => {
           sport: 'Soccer',
           homeTeam: 'Real Madrid',
           awayTeam: 'Barcelona',
-          date: 'Today',
+          date: '2025-08-10',
           time: '9:00 PM',
           venue: 'Santiago Bernabéu',
         },
@@ -116,7 +130,7 @@ const Matches = () => {
           sport: 'MLB',
           homeTeam: 'Yankees',
           awayTeam: 'Red Sox',
-          date: 'Tomorrow',
+          date: '2025-08-11',
           time: '7:30 PM',
           venue: 'Yankee Stadium',
         },
@@ -125,7 +139,7 @@ const Matches = () => {
           sport: 'NHL',
           homeTeam: 'Rangers',
           awayTeam: 'Islanders',
-          date: 'Aug 2',
+          date: '2025-08-12',
           time: '7:00 PM',
           venue: 'Madison Square Garden',
         },
@@ -197,10 +211,183 @@ const Matches = () => {
     setFavorites(newFavorites);
   };
 
-  const addToCalendar = (match) => {
-    // This would integrate with your calendar API
-    console.log('Adding to calendar:', match);
-    // Show success message or navigate to calendar
+  const addToCalendar = async (match, calendarType = 'google') => {
+    setIsAddingToCalendar(true);
+    try {
+      // Parse date and time more reliably
+      let startTime;
+      if (match.date === 'Today' || match.date === '2025-08-10') {
+        // For today's matches, use current date with the specified time
+        const today = new Date();
+        if (match.time) {
+          const [time, period] = match.time.split(' ');
+          const [hours, minutes] = time.split(':');
+          let hour24 = parseInt(hours);
+          if (period === 'PM' && hour24 !== 12) hour24 += 12;
+          if (period === 'AM' && hour24 === 12) hour24 = 0;
+          
+          today.setHours(hour24, parseInt(minutes || 0), 0, 0);
+          startTime = today;
+        } else {
+          startTime = new Date();
+        }
+      } else if (match.date.includes('-')) {
+        // Format: YYYY-MM-DD
+        if (match.time) {
+          startTime = new Date(`${match.date}T${convertTo24Hour(match.time)}`);
+        } else {
+          startTime = new Date(`${match.date}T19:00:00`);
+        }
+      } else {
+        // Handle other date formats or set default
+        startTime = new Date();
+        startTime.setHours(19, 0, 0, 0); // Default to 7 PM
+      }
+
+      // Estimate end time (3 hours after start for most sports)
+      const endTime = new Date(startTime.getTime() + 3 * 60 * 60 * 1000);
+
+      const eventData = {
+        title: `${match.awayTeam} vs ${match.homeTeam}`,
+        description: `${match.sport} match at ${match.venue || 'TBD'}`,
+        location: match.venue || 'TBD',
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        sport: match.sport,
+        teams: {
+          home: match.homeTeam,
+          away: match.awayTeam
+        }
+      };
+
+      const token = localStorage.getItem('token'); // Assuming token is stored in localStorage
+      console.log('Token found:', !!token);
+      console.log('Event data:', eventData);
+      console.log('Calendar type:', calendarType);
+      
+      if (!token) {
+        // For demo purposes, let's create a mock event locally
+        const confirmed = confirm('You are not logged in. Would you like to:\n\n1. Click "OK" to go to Login page\n2. Click "Cancel" to download calendar file anyway (demo mode)');
+        
+        if (confirmed) {
+          navigate('/login');
+          return;
+        } else {
+          // Demo mode - just download the ICS file for Apple Calendar
+          if (calendarType === 'google') {
+            alert('Google Calendar requires login. Switching to Apple Calendar download...');
+            calendarType = 'apple';
+          }
+          // Continue to Apple Calendar download without authentication
+        }
+      }
+
+      if (calendarType === 'apple') {
+        // For Apple Calendar, download ICS file
+        if (token) {
+          // Authenticated user - use backend API
+          const response = await axios.post('http://localhost:5000/api/apple/calendar', {
+            summary: eventData.title,
+            description: eventData.description,
+            startTime: eventData.startTime,
+            endTime: eventData.endTime,
+            location: eventData.location
+          }, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            },
+            responseType: 'blob'
+          });
+
+          // Create and trigger download
+          const blob = new Blob([response.data], { type: 'text/calendar' });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${match.awayTeam}_vs_${match.homeTeam}.ics`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        } else {
+          // Demo mode - generate ICS file client-side
+          const generateICS = (eventData) => {
+            const formatDate = (date) => {
+              return new Date(date).toISOString().replace(/-|:|\./g, '').slice(0, 15) + 'Z';
+            };
+            
+            const now = new Date();
+            const uid = 'match-' + Date.now() + '@sportscalendar.com';
+            
+            return [
+              'BEGIN:VCALENDAR',
+              'VERSION:2.0',
+              'PRODID:-//Sports Calendar Integration//EN',
+              'CALSCALE:GREGORIAN',
+              'METHOD:PUBLISH',
+              'BEGIN:VEVENT',
+              `UID:${uid}`,
+              `DTSTAMP:${formatDate(now)}`,
+              `DTSTART:${formatDate(eventData.startTime)}`,
+              `DTEND:${formatDate(eventData.endTime)}`,
+              `SUMMARY:${eventData.title}`,
+              `DESCRIPTION:${eventData.description}`,
+              `LOCATION:${eventData.location}`,
+              'END:VEVENT',
+              'END:VCALENDAR'
+            ].join('\r\n');
+          };
+          
+          const icsContent = generateICS(eventData);
+          const blob = new Blob([icsContent], { type: 'text/calendar' });
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `${match.awayTeam}_vs_${match.homeTeam}.ics`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        }
+        
+        alert('Calendar file downloaded! Open it to add to Apple Calendar.');
+      } else {
+        // For Google Calendar
+        if (!token) {
+          alert('Google Calendar requires authentication. Please login first or use Apple Calendar option.');
+          return;
+        }
+        
+        console.log('Sending to Google Calendar API:', eventData);
+        const response = await axios.post('http://localhost:5000/api/events', eventData, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        
+        console.log('Google Calendar response:', response.data);
+        alert('Match added to your Google Calendar!');
+      }
+    } catch (error) {
+      console.error('Error adding to calendar:', error);
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      if (error.response && error.response.status === 401) {
+        alert('Your session has expired or you are not authorized. Please log in again.');
+        navigate('/login');
+      } else if (error.response && error.response.data.message) {
+        if (error.response.data.message.includes('Google Calendar not connected')) {
+          alert('Please connect your Google account from your profile to add events to Google Calendar.');
+          navigate('/profile');
+        } else {
+          alert(`Error: ${error.response.data.message}`);
+        }
+      } else {
+        alert(`Failed to add match to ${calendarType} calendar. Please try again.`);
+      }
+    } finally {
+      setIsAddingToCalendar(false);
+    }
   };
 
   const getMatchesForTab = () => {
@@ -276,32 +463,16 @@ const Matches = () => {
           </Box>
 
           {/* Teams */}
-          <Box sx={{ mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, flexGrow: 1 }}>
-                {match.awayTeam}
-              </Typography>
-              {(match.awayScore !== undefined) && (
-                <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                  {match.awayScore}
-                </Typography>
-              )}
-            </Box>
-            
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
-              @
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 3, textAlign: 'center' }}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              {match.awayTeam}
             </Typography>
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, flexGrow: 1 }}>
-                {match.homeTeam}
-              </Typography>
-              {(match.homeScore !== undefined) && (
-                <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                  {match.homeScore}
-                </Typography>
-              )}
-            </Box>
+            <Typography variant="body1" color="text.secondary" sx={{ mx: 2 }}>
+              vs
+            </Typography>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              {match.homeTeam}
+            </Typography>
           </Box>
 
           {/* Match Info */}
@@ -311,7 +482,7 @@ const Matches = () => {
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {match.isLive 
-                ? `${match.quarter} ${match.time}` 
+                ? `Live` 
                 : match.final 
                   ? `Final - ${match.date}`
                   : `${match.date} ${match.time || ''}`
@@ -326,7 +497,8 @@ const Matches = () => {
               size="small"
               fullWidth
               startIcon={<CalendarToday />}
-              onClick={() => addToCalendar(match)}
+              onClick={(e) => setCalendarMenuEl(e.currentTarget)}
+              disabled={isAddingToCalendar}
               sx={{
                 borderColor: getSportColor(match.sport),
                 color: getSportColor(match.sport),
@@ -335,8 +507,26 @@ const Matches = () => {
                 },
               }}
             >
-              Add to Calendar
+              {isAddingToCalendar ? 'Adding...' : 'Add to Calendar'}
             </Button>
+            <Menu
+              anchorEl={calendarMenuEl}
+              open={Boolean(calendarMenuEl)}
+              onClose={() => setCalendarMenuEl(null)}
+            >
+              <MenuItem onClick={() => {
+                addToCalendar(match, 'google');
+                setCalendarMenuEl(null);
+              }}>
+                Google Calendar
+              </MenuItem>
+              <MenuItem onClick={() => {
+                addToCalendar(match, 'apple');
+                setCalendarMenuEl(null);
+              }}>
+                Apple Calendar
+              </MenuItem>
+            </Menu>
             {match.isLive && (
               <Button
                 variant="contained"

@@ -19,7 +19,7 @@ const validateEvent = [
 router.get('/', eventController.getEvents);
 
 // Create a new event
-router.post('/', validateEvent, eventController.createEvent);
+router.post('/', eventController.createEvent);
 
 // Add event to Google Calendar
 router.post('/:eventId/google', eventController.addToGoogleCalendar);

@@ -40,43 +40,48 @@ const Dashboard = () => {
   // Function to add match to calendar
   const addToCalendar = async (game) => {
     try {
+      const startTime = new Date(game.date);
+      const endTime = new Date(startTime.getTime() + 3 * 60 * 60 * 1000); // 3 hours later
+
       const eventData = {
         title: `${game.awayTeam} vs ${game.homeTeam}`,
         description: `${game.sport} match - ${game.league || game.sport}`,
-        venue: game.venue || 'TBD',
-        startDate: game.date,
-        startTime: game.time || '10:00',
+        location: game.venue || 'TBD',
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
         sport: game.sport,
-        teams: [game.homeTeam, game.awayTeam]
+        teams: {
+          home: game.homeTeam,
+          away: game.awayTeam
+        }
       };
 
-      // You can implement Google Calendar integration here
-      // For now, create a calendar file download
-      const calendarEvent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Sports Calendar//EN
-BEGIN:VEVENT
-SUMMARY:${eventData.title}
-DTSTART:${eventData.startDate?.replace(/-/g, '')}T${eventData.startTime?.replace(/:/g, '')}00Z
-DESCRIPTION:${eventData.description}
-LOCATION:${eventData.venue}
-END:VEVENT
-END:VCALENDAR`;
+      const token = localStorage.getItem('token'); // Assuming token is stored in localStorage
+      if (!token) {
+          alert('Please login to add events to your calendar.');
+          navigate('/login');
+          return;
+      }
 
-      const blob = new Blob([calendarEvent], { type: 'text/calendar' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${game.awayTeam}_vs_${game.homeTeam}.ics`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      await axios.post('http://localhost:5000/api/events', eventData, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       
-      alert('Match added to calendar! Check your downloads folder.');
+      alert('Match added to your Google Calendar!');
     } catch (error) {
       console.error('Error adding to calendar:', error);
-      alert('Failed to add match to calendar.');
+      if (error.response && error.response.status === 401) {
+        alert('Your session has expired or you are not authorized. Please log in again.');
+        navigate('/login');
+      } else if (error.response && error.response.data.message && error.response.data.message.includes('Google')) {
+        alert('Please connect your Google account from your profile to add events to Google Calendar.');
+        navigate('/profile');
+      }
+      else {
+        alert('Failed to add match to calendar.');
+      }
     }
   };
 

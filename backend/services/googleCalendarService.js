@@ -1,5 +1,5 @@
 const { google } = require('googleapis');
-const { createOAuthClient } = require('../config/google');
+const { createOAuthClient, getAccessToken } = require('../config/google');
 
 /**
  * Create a Google Calendar event
@@ -8,36 +8,43 @@ const { createOAuthClient } = require('../config/google');
  * @returns {string} - Google Calendar event ID
  */
 exports.createGoogleCalendarEvent = async (user, eventData) => {
-  if (!user.googleCalendarToken) {
+  if (!user.googleCalendarToken || !user.googleCalendarToken.accessToken) {
     throw new Error('User has not connected Google Calendar');
   }
 
-  const oauth2Client = createOAuthClient(
-    user.googleCalendarToken.accessToken,
-    user.googleCalendarToken.refreshToken
-  );
-  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+  try {
+    const oauth2Client = createOAuthClient(
+      user.googleCalendarToken.accessToken,
+      user.googleCalendarToken.refreshToken
+    );
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
-  const googleEvent = {
-    summary: eventData.title,
-    description: `${eventData.sport} match: ${eventData.teams?.home || ''} vs ${eventData.teams?.away || ''}\n${eventData.description || ''}`,
-    start: {
-      dateTime: eventData.startTime,
-      timeZone: 'Asia/Kolkata',
-    },
-    end: {
-      dateTime: eventData.endTime,
-      timeZone: 'Asia/Kolkata',
-    },
-    location: eventData.location,
-  };
+    const googleEvent = {
+      summary: eventData.title,
+      description: `${eventData.sport} match: ${eventData.teams?.away || eventData.teams?.[1] || ''} vs ${eventData.teams?.home || eventData.teams?.[0] || ''}\n${eventData.description || ''}`,
+      start: {
+        dateTime: eventData.startTime,
+        timeZone: 'Asia/Kolkata',
+      },
+      end: {
+        dateTime: eventData.endTime,
+        timeZone: 'Asia/Kolkata',
+      },
+      location: eventData.location,
+    };
 
-  const response = await calendar.events.insert({
-    calendarId: 'primary',
-    requestBody: googleEvent,
-  });
+    const response = await calendar.events.insert({
+      calendarId: 'primary',
+      requestBody: googleEvent,
+    });
 
-  return response.data.id;
+    return response.data.id;
+  } catch (error) {
+    if (error.code === 401) {
+      throw new Error('Google Calendar authorization expired. Please reconnect your Google account.');
+    }
+    throw new Error(`Failed to create Google Calendar event: ${error.message}`);
+  }
 };
 
 /**
@@ -59,7 +66,7 @@ exports.updateGoogleCalendarEvent = async (user, googleEventId, eventData) => {
 
   const googleEvent = {
     summary: eventData.title,
-    description: `${eventData.sport} match: ${eventData.teams?.home || ''} vs ${eventData.teams?.away || ''}\n${eventData.description || ''}`,
+    description: `${eventData.sport} match: ${eventData.teams?.away || eventData.teams?.[1] || ''} vs ${eventData.teams?.home || eventData.teams?.[0] || ''}\n${eventData.description || ''}`,
     start: {
       dateTime: eventData.startTime,
       timeZone: 'Asia/Kolkata',

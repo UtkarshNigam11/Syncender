@@ -48,11 +48,11 @@ export const CustomThemeProvider = ({ children }) => {
       MuiAppBar: {
         styleOverrides: {
           root: {
-            background: undefined,
-          },
-        },
-      },
-    },
+            background: undefined
+          }
+        }
+      }
+    }
   });
 
   const darkTheme = createTheme({
