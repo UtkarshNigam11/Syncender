@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
@@ -36,6 +36,7 @@ const Dashboard = () => {
   const [upcomingGames, setUpcomingGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const hasFetchedData = useRef(false);
 
   // Function to add match to calendar
   const addToCalendar = async (game) => {
@@ -87,6 +88,14 @@ const Dashboard = () => {
 
   // Fetch real sports data
   useEffect(() => {
+    const cachedLiveGames = localStorage.getItem('dashboard_liveGames');
+    const cachedUpcomingGames = localStorage.getItem('dashboard_upcomingGames');
+    if (cachedLiveGames && cachedUpcomingGames) {
+      setLiveGames(JSON.parse(cachedLiveGames));
+      setUpcomingGames(JSON.parse(cachedUpcomingGames));
+      setLoading(false);
+      return;
+    }
     const fetchSportsData = async () => {
       try {
         setLoading(true);
@@ -185,6 +194,9 @@ const Dashboard = () => {
           ...cricketGames.filter(g => !g.isLive)
         ].slice(0, 3));
         
+        // After fetching:
+        localStorage.setItem('dashboard_liveGames', JSON.stringify(liveGames));
+        localStorage.setItem('dashboard_upcomingGames', JSON.stringify(upcomingGames));
       } catch (err) {
         console.error('Error fetching sports data:', err);
         setError('Unable to load live sports data. Please check if the backend server is running.');
@@ -197,6 +209,7 @@ const Dashboard = () => {
     };
 
     fetchSportsData();
+    hasFetchedData.current = true;
   }, []);
 
   const getSportIcon = (sport) => {
