@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import {
   Container,
@@ -39,6 +39,9 @@ import {
 
 const Matches = () => {
   const navigate = useNavigate();
+  const { teamId } = useParams();
+  const location = useLocation();
+  const { sportId, leagueCode } = location.state || {};
   const [tabValue, setTabValue] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [matches, setMatches] = useState({
@@ -70,108 +73,75 @@ const Matches = () => {
   };
 
   useEffect(() => {
-    // Mock data for different match states
-    const mockMatches = {
-      live: [
-        {
-          id: 1,
-          sport: 'NBA',
-          homeTeam: 'Lakers',
-          awayTeam: 'Warriors',
-          venue: 'Staples Center',
-          isLive: true,
-          date: '2025-08-10',
-          time: '09:00 PM',
-        },
-        {
-          id: 2,
-          sport: 'Cricket',
-          homeTeam: 'India',
-          awayTeam: 'Australia',
-          venue: 'MCG, Melbourne',
-          isLive: true,
-          date: '2025-08-10',
-          time: '08:30 PM',
-        },
-        {
-          id: 3,
-          sport: 'NFL',
-          homeTeam: 'Cowboys',
-          awayTeam: 'Giants',
-          venue: 'AT&T Stadium',
-          isLive: true,
-          date: '2025-08-10',
-          time: '10:00 PM',
-        },
-      ],
-      today: [
-        {
-          id: 4,
-          sport: 'NBA',
-          homeTeam: 'Heat',
-          awayTeam: 'Celtics',
-          date: '2025-08-10',
-          time: '8:00 PM',
-          venue: 'Madison Square Garden',
-        },
-        {
-          id: 5,
-          sport: 'Soccer',
-          homeTeam: 'Real Madrid',
-          awayTeam: 'Barcelona',
-          date: '2025-08-10',
-          time: '9:00 PM',
-          venue: 'Santiago Bernabéu',
-        },
-      ],
-      upcoming: [
-        {
-          id: 6,
-          sport: 'MLB',
-          homeTeam: 'Yankees',
-          awayTeam: 'Red Sox',
-          date: '2025-08-11',
-          time: '7:30 PM',
-          venue: 'Yankee Stadium',
-        },
-        {
-          id: 7,
-          sport: 'NHL',
-          homeTeam: 'Rangers',
-          awayTeam: 'Islanders',
-          date: '2025-08-12',
-          time: '7:00 PM',
-          venue: 'Madison Square Garden',
-        },
-      ],
-      completed: [
-        {
-          id: 8,
-          sport: 'NBA',
-          homeTeam: 'Knicks',
-          awayTeam: 'Nets',
-          homeScore: 115,
-          awayScore: 108,
-          date: 'Yesterday',
-          venue: 'Barclays Center',
-          final: true,
-        },
-        {
-          id: 9,
-          sport: 'Cricket',
-          homeTeam: 'England',
-          awayTeam: 'Pakistan',
-          homeScore: '324/7',
-          awayScore: '298 all out',
-          date: 'Yesterday',
-          venue: 'Lords, London',
-          final: true,
-        },
-      ],
-    };
+    const load = async () => {
+      try {
+        // If we came from a team selection, attempt to fetch real data
+        if (teamId && sportId) {
+          let events = [];
+          if (sportId === 'soccer') {
+            // Fetch EPL and/or UCL depending on leagueCode; combine and filter
+            const leagues = leagueCode ? [leagueCode] : ['eng.1', 'uefa.champions'];
+            const responses = await Promise.all(
+              leagues.map((code) => axios.get(`http://localhost:5000/api/sports/scores/soccer/${code}`))
+            );
+            responses.forEach((res) => {
+              const data = res.data?.data;
+              if (data?.events) events.push(...data.events);
+            });
+          } else {
+            // Generic ESPN sports
+            const res = await axios.get(`http://localhost:5000/api/sports/scores/${sportId}`);
+            const data = res.data?.data;
+            if (data?.events) events = data.events;
+          }
 
-    setMatches(mockMatches);
-  }, []);
+          // Filter events to this team
+          const filtered = (events || []).filter((evt) => {
+            const comps = evt.competitions?.[0]?.competitors || [];
+            return comps.some((c) => c.team?.id === teamId);
+          });
+
+          // Map to UI shape and categorize
+          const now = new Date();
+          const bucket = { live: [], today: [], upcoming: [], completed: [] };
+          filtered.forEach((event, i) => {
+            const state = event.status?.type?.state;
+            const statusName = event.status?.type?.name;
+            const isLive = state === 'in' || state === 'live' || state === 'inprogress' || statusName === 'STATUS_IN_PROGRESS' || statusName === 'STATUS_LIVE';
+            const isPost = state === 'post' || statusName === 'STATUS_FINAL' || statusName === 'STATUS_FULL_TIME';
+            const dateISO = event.date;
+            const date = new Date(dateISO);
+            const isToday = date.toDateString() === now.toDateString();
+            const match = {
+              id: `${sportId}-${teamId}-${i}`,
+              sport: sportId === 'soccer' ? 'Soccer' : sportId.toUpperCase(),
+              homeTeam: event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'home')?.team?.displayName || 'Home',
+              awayTeam: event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'away')?.team?.displayName || 'Away',
+              venue: event.competitions?.[0]?.venue?.fullName || 'TBD',
+              date: dateISO,
+              time: undefined,
+              isLive,
+              final: isPost,
+            };
+            if (isLive) bucket.live.push(match);
+            else if (isPost) bucket.completed.push(match);
+            else if (isToday) bucket.today.push(match);
+            else bucket.upcoming.push(match);
+          });
+
+          setMatches(bucket);
+          return;
+        }
+      } catch (e) {
+        console.error('Failed to load matches:', e);
+      }
+
+      // Fallback: keep existing mock if no params/state
+      const mockMatches = { live: [], today: [], upcoming: [], completed: [] };
+      setMatches(mockMatches);
+    };
+    load();
+  }, [teamId, sportId, leagueCode]);
 
   const getSportIcon = (sport) => {
     const icons = {

@@ -65,6 +65,7 @@ function AppContent() {
                   <Route path="/sports" element={<Sports />} />
                   <Route path="/teams/:sportId" element={<Teams />} />
                   <Route path="/matches" element={<Matches />} />
+                  <Route path="/matches/:teamId" element={<Matches />} />
                   <Route path="/calendar" element={<Calendar />} />
                   <Route path="/test-cricket" element={<TestCricketMatch />} />
                   <Route path="/login" element={<Login />} />

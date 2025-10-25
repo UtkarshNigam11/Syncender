@@ -88,119 +88,147 @@ const Dashboard = () => {
 
   // Fetch real sports data
   useEffect(() => {
+    // If not SPA navigation (i.e., full page reload), clear cache and fetch fresh data
+    if (!sessionStorage.getItem('dashboard_spa_nav')) {
+      localStorage.removeItem('dashboard_liveGames');
+      localStorage.removeItem('dashboard_upcomingGames');
+    }
+    // If SPA navigation, use cache
+    const spaNav = sessionStorage.getItem('dashboard_spa_nav');
     const cachedLiveGames = localStorage.getItem('dashboard_liveGames');
     const cachedUpcomingGames = localStorage.getItem('dashboard_upcomingGames');
-    if (cachedLiveGames && cachedUpcomingGames) {
+    if (spaNav && cachedLiveGames && cachedUpcomingGames) {
       setLiveGames(JSON.parse(cachedLiveGames));
       setUpcomingGames(JSON.parse(cachedUpcomingGames));
       setLoading(false);
       return;
     }
+    
+    // Fetch fresh data
     const fetchSportsData = async () => {
       try {
         setLoading(true);
         
-        // Fetch live NFL games
-        const nflResponse = await axios.get('http://localhost:5000/api/sports/scores/nfl');
+        // Fetch multiple sports in parallel for better coverage
+        const [
+          nflResponse,
+          nbaResponse,
+          eplResponse,
+          uclResponse,
+          cricketResponse
+        ] = await Promise.all([
+          axios.get('http://localhost:5000/api/sports/scores/nfl'),
+          axios.get('http://localhost:5000/api/sports/scores/nba'),
+          axios.get('http://localhost:5000/api/sports/scores/soccer/eng.1'), // English Premier League
+          axios.get('http://localhost:5000/api/sports/scores/soccer/uefa.champions'), // UEFA Champions League
+          axios.get('http://localhost:5000/api/sports/cricket/matches')
+        ]);
+
+        // --- BEGIN: Unified all-sports logic ---
+        const cricketMatchesRaw = cricketResponse.data?.matches || cricketResponse.data?.data || [];
         
-        // Fetch cricket matches  
-        const cricketResponse = await axios.get('http://localhost:5000/api/sports/cricket/matches');
-        
-        // Process NFL data
-        const nflGames = nflResponse.data.data?.events?.slice(0, 2).map((event, index) => ({
-          id: `nfl-${index}`,
-          sport: 'NFL',
-          homeTeam: event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'home')?.team?.displayName || 'Home Team',
-          awayTeam: event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'away')?.team?.displayName || 'Away Team',
-          homeScore: event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'home')?.score || '0',
-          awayScore: event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'away')?.score || '0',
-          status: event.status?.type?.description || 'Scheduled',
-          venue: event.competitions?.[0]?.venue?.fullName || 'TBD',
-          isLive: event.status?.type?.state === 'in',
-          date: event.date,
-        })) || [];
-
-
-        // Major cricket leagues/events
-        const majorLeagues = [
-          'ICC Cricket World Cup',
-          'ICC T20 World Cup',
-          'ICC Champions Trophy',
-          'ICC World Test Championship',
-          'Indian Premier League',
-          'Big Bash League',
-          'Pakistan Super League',
-          'Caribbean Premier League',
-          'The Ashes',
-          'Asia Cup',
-          'Bangladesh Premier League',
-          'SA20',
-          'Lanka Premier League',
-          'Vitality Blast',
-          'Mzansi Super League',
-          'Global T20 Canada',
-          'Abu Dhabi T10',
-          'The Hundred',
-          'Super Smash',
-          'Zimbabwe Domestic T20',
-          'Afghanistan Premier League',
-          'Euro T20 Slam',
-          "Women's Big Bash League",
-          "Women's T20 Challenge",
-          "Women's Cricket World Cup",
-          "Women's T20 World Cup",
-        ];
-
         // Helper to check if a match is live
         const isCricketLive = (event) => {
           const status = (event.strStatus || event.status || '').toLowerCase();
-          // Common live indicators
-          const liveIndicators = ['live', 'in progress', 'ongoing', '1st innings', '2nd innings', 'stumps', 'lunch', 'tea', 'rain delay'];
-          if (liveIndicators.some(ind => status.includes(ind))) return true;
-          // Fallback: check if current time is between start and end (if available)
-          if (event.dateEvent && event.strTime) {
-            const start = new Date(`${event.dateEvent}T${event.strTime}`);
-            const now = new Date();
-            // Assume a match lasts up to 8 hours
-            if (now >= start && now - start < 8 * 60 * 60 * 1000) return true;
-          }
-          return false;
+          return status.includes('live') || status.includes('in progress') || status.includes('inplay') || status.includes('running');
         };
-
-        // Filter and map cricket matches
-        const cricketMatchesRaw = cricketResponse.data.matches || cricketResponse.data.data || [];
-        const cricketGames = cricketMatchesRaw
-          .filter(event => majorLeagues.some(league => (event.strLeague || event.league || '').toLowerCase().includes(league.toLowerCase())))
-          .map((event, index) => ({
-            id: `cricket-${index}`,
-            sport: 'Cricket',
-            homeTeam: event.strHomeTeam || event.team1 || 'Home Team',
-            awayTeam: event.strAwayTeam || event.team2 || 'Away Team',
-            status: event.strStatus || event.status || 'Scheduled',
-            venue: event.strVenue || 'TBD',
-            date: event.dateEvent,
-            time: event.strTime,
-            league: event.strLeague || event.leagueInfo?.name || 'Cricket',
-            isLive: isCricketLive(event),
-            isUpcoming: !isCricketLive(event) && new Date(event.dateEvent) > new Date(),
-          }));
-
-        setLiveGames([
-          ...nflGames.filter(g => g.isLive),
-          ...cricketGames.filter(g => g.isLive)
-        ]);
-        setUpcomingGames([
-          ...nflGames.filter(g => !g.isLive),
-          ...cricketGames.filter(g => !g.isLive)
-        ].slice(0, 3));
         
-        // After fetching:
-        localStorage.setItem('dashboard_liveGames', JSON.stringify(liveGames));
-        localStorage.setItem('dashboard_upcomingGames', JSON.stringify(upcomingGames));
-      } catch (err) {
-        console.error('Error fetching sports data:', err);
+        const now = new Date();
+        const threeDaysLater = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+        
+        function extractMatchesFromApi(data, sportName, leagueOverride) {
+          if (!data) return [];
+          // NFL/ESPN style
+          if (Array.isArray(data.events)) {
+            return data.events.map((event, index) => {
+              const eventDate = new Date(event.date);
+              const state = event.status?.type?.state;
+              const statusName = event.status?.type?.name;
+              
+              // More comprehensive live game detection
+              const isLive = state === 'in' || state === 'live' || state === 'inprogress' || 
+                           statusName === 'STATUS_IN_PROGRESS' || statusName === 'STATUS_LIVE';
+              
+              // More flexible upcoming game detection
+              // Games that are scheduled/pre-game within next 7 days
+              const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+              const isScheduled = state === 'pre' || statusName === 'STATUS_SCHEDULED';
+              const isUpcoming = (isScheduled && eventDate >= now && eventDate <= sevenDaysLater) || 
+                               (eventDate >= now && eventDate <= threeDaysLater && !isLive && state !== 'post');
+              
+              const leagueName = leagueOverride || (data?.leagues?.[0]?.name) || event.league?.name || sportName;
+              return {
+                id: `${sportName}-${leagueName}-${index}`,
+                sport: sportName,
+                homeTeam: event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'home')?.team?.displayName || 'Home Team',
+                awayTeam: event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'away')?.team?.displayName || 'Away Team',
+                homeScore: event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'home')?.score || '0',
+                awayScore: event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'away')?.score || '0',
+                status: event.status?.type?.description || 'Scheduled',
+                venue: event.competitions?.[0]?.venue?.fullName || 'TBD',
+                isLive,
+                isUpcoming,
+                date: event.date,
+                time: undefined,
+                league: leagueName,
+              };
+            });
+          }
+          // Cricket/SportsDB style
+          if (Array.isArray(data)) {
+            return data.map((event, index) => {
+              const matchDate = event.dateEvent ? new Date(event.dateEvent + (event.strTime ? 'T' + event.strTime : '')) : null;
+              const isLive = isCricketLive(event);
+              const isUpcoming = matchDate && matchDate >= now && matchDate <= threeDaysLater && !isLive;
+              return {
+                id: `${sportName}-${event.strLeague || sportName}-${index}`,
+                sport: sportName,
+                homeTeam: event.strHomeTeam || event.team1 || 'Home Team',
+                awayTeam: event.strAwayTeam || event.team2 || 'Away Team',
+                status: event.strStatus || event.status || 'Scheduled',
+                venue: event.strVenue || 'TBD',
+                date: event.dateEvent,
+                time: event.strTime,
+                league: event.strLeague || event.leagueInfo?.name || sportName,
+                isLive,
+                isUpcoming,
+              };
+            });
+          }
+          return [];
+        }
+        
+        // Collect all sports data here (add more as needed)
+        let allMatches = [];
+        allMatches = allMatches.concat(extractMatchesFromApi(nflResponse.data.data, 'NFL'));
+        allMatches = allMatches.concat(extractMatchesFromApi(nbaResponse.data.data, 'NBA'));
+        allMatches = allMatches.concat(extractMatchesFromApi(eplResponse.data.data, 'Soccer', eplResponse.data.league || 'English Premier League'));
+        allMatches = allMatches.concat(extractMatchesFromApi(uclResponse.data.data, 'Soccer', uclResponse.data.league || 'UEFA Champions League'));
+        allMatches = allMatches.concat(extractMatchesFromApi(cricketMatchesRaw, 'Cricket'));
+        // TODO: Add more sports here as you add more APIs
+        
+        // Filter for live and upcoming (within 3 days)
+        const live = allMatches.filter(g => g.isLive);
+        const upcoming = allMatches.filter(g => g.isUpcoming)
+          .sort((a, b) => {
+            const aDate = new Date(a.date + (a.time ? 'T' + a.time : ''));
+            const bDate = new Date(b.date + (b.time ? 'T' + b.time : ''));
+            return aDate - bDate;
+          })
+          .slice(0, 3);
+          
+        setLiveGames(live);
+        setUpcomingGames(upcoming);
+        setError('');
+        
+        // Cache the data
+        localStorage.setItem('dashboard_liveGames', JSON.stringify(live));
+        localStorage.setItem('dashboard_upcomingGames', JSON.stringify(upcoming));
+        sessionStorage.setItem('dashboard_spa_nav', 'true');
+        // --- END: Unified all-sports logic ---
+      } catch (error) {
+        console.error('Error fetching sports data:', error);
         setError('Unable to load live sports data. Please check if the backend server is running.');
-        // Fallback to show no games message
         setLiveGames([]);
         setUpcomingGames([]);
       } finally {
@@ -212,6 +240,7 @@ const Dashboard = () => {
     hasFetchedData.current = true;
   }, []);
 
+  // Helper functions for sport icons and colors
   const getSportIcon = (sport) => {
     const icons = {
       NBA: <SportsBasketball />,
@@ -231,7 +260,7 @@ const Dashboard = () => {
       MLB: '#CC0000',
       NHL: '#000080',
       Cricket: '#4CAF50',
-      Soccer: '#009688',
+      Soccer: '#00A86B',
     };
     return colors[sport] || '#1976d2';
   };

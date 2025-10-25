@@ -26,14 +26,24 @@ const Teams = () => {
       try {
         // Get sport name
         const sportsRes = await axios.get('http://localhost:5000/api/sports/sports');
-        const sport = sportsRes.data.find(s => s.id === sportId);
+        const sportsList = Array.isArray(sportsRes.data)
+          ? sportsRes.data
+          : Array.isArray(sportsRes.data?.data)
+          ? sportsRes.data.data
+          : [];
+        const sport = sportsList.find(s => s.id === sportId);
         if (sport) {
           setSportName(sport.name);
         }
         
         // Get teams for this sport
         const teamsRes = await axios.get(`http://localhost:5000/api/sports/teams/${sportId}`);
-        setTeams(teamsRes.data);
+        const normalizedTeams = Array.isArray(teamsRes.data)
+          ? teamsRes.data
+          : Array.isArray(teamsRes.data?.data)
+          ? teamsRes.data.data
+          : [];
+        setTeams(normalizedTeams);
       } catch (err) {
         console.error('Error fetching teams:', err);
         setError('Failed to load teams');
@@ -75,13 +85,14 @@ const Teams = () => {
               <CardActionArea 
                 component={Link} 
                 to={`/matches/${team.id}`}
+                state={{ sportId, leagueCode: team.leagueCode, league: team.league }}
               >
                 <CardContent>
                   <Typography gutterBottom variant="h5" component="div">
                     {team.name}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    View upcoming matches and add to calendar
+                    {team.league ? `${team.league}` : 'View upcoming matches and add to calendar'}
                   </Typography>
                 </CardContent>
               </CardActionArea>
