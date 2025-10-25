@@ -461,17 +461,7 @@ const Dashboard = () => {
                           </Box>
                         </Box>
                         
-                        <Box sx={{ textAlign: 'right' }}>
-                          <Button 
-                            size="small" 
-                            variant="outlined"
-                            startIcon={<EventAvailable />}
-                            onClick={() => addToCalendar(game)}
-                            sx={{ mb: 1 }}
-                          >
-                            Add to Calendar
-                          </Button>
-                        </Box>
+                        {/* Removed Add to Calendar button from ongoing matches */}
                       </Box>
                     </Card>
                   ))
