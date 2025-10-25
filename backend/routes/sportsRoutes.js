@@ -10,6 +10,8 @@ router.get('/sports', sportsController.getSports);
 
 // ESPN API routes - Live scores, teams, standings
 router.get('/scores/:sport', sportsController.getLiveScores);
+// League-specific soccer scores (e.g., /scores/soccer/eng.1, /scores/soccer/uefa.champions)
+router.get('/scores/soccer/:league', sportsController.getSoccerLeagueScores);
 router.get('/teams/:sport', sportsController.getTeams);
 router.get('/standings/:sport', sportsController.getStandings);
 

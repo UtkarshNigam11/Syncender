@@ -41,6 +41,12 @@ exports.getLiveScores = async (req, res) => {
 exports.getTeams = async (req, res) => {
   try {
     const { sport } = req.params;
+    const { league } = req.query;
+    // For soccer, allow league query; otherwise default behavior
+    if (sport === 'soccer') {
+      const teams = await sportsApiService.getTeams(sport, { league });
+      return res.json(teams);
+    }
     const teams = await sportsApiService.getTeams(sport);
     res.json(teams);
   } catch (error) {
@@ -66,6 +72,24 @@ exports.getStandings = async (req, res) => {
     res.status(500).json({
       success: false,
       message: `Failed to get standings for ${req.params.sport}`,
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get soccer league specific scores (e.g., EPL, UCL)
+ */
+exports.getSoccerLeagueScores = async (req, res) => {
+  try {
+    const { league } = req.params; // e.g., 'eng.1', 'uefa.champions'
+    const scores = await sportsApiService.getSoccerLeagueScores(league);
+    res.json(scores);
+  } catch (error) {
+    console.error('Error getting soccer league scores:', error);
+    res.status(500).json({
+      success: false,
+      message: `Failed to get soccer league scores for ${req.params.league}`,
       error: error.message
     });
   }
