@@ -208,3 +208,13 @@ router.get('/google', (req, res) => {
 });
 
 module.exports = router;
+ 
+// Placeholder: logout from all devices
+// NOTE: Proper implementation requires token versioning or blacklist.
+router.post('/logout-all', (req, res) => {
+  try {
+    return res.json({ success: true, message: 'Logout-all requested. Please change your password to invalidate old sessions.' });
+  } catch (e) {
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+});

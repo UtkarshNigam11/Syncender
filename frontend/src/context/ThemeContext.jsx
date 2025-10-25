@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { createTheme } from '@mui/material/styles';
 
 const ThemeContext = createContext();
@@ -12,105 +12,63 @@ export const useTheme = () => {
 };
 
 export const CustomThemeProvider = ({ children }) => {
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const saved = localStorage.getItem('darkMode');
-    return saved ? JSON.parse(saved) : false;
-  });
+  // Theme mode: 'system' | 'light' | 'dark'
+  const [themeMode, setThemeMode] = useState(() => localStorage.getItem('themeMode') || 'system');
+  // Accent color: choose from palette keys
+  const [accent, setAccent] = useState(() => localStorage.getItem('accentColor') || 'blue');
 
-  useEffect(() => {
-    localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
-  }, [isDarkMode]);
+  useEffect(() => { localStorage.setItem('themeMode', themeMode); }, [themeMode]);
+  useEffect(() => { localStorage.setItem('accentColor', accent); }, [accent]);
 
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode);
+  // Resolve system preference
+  const prefersDark = useMemo(() => window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches, []);
+  const isDark = themeMode === 'dark' || (themeMode === 'system' && prefersDark);
+
+  const primaryMap = {
+    blue: { main: '#1976d2', light: '#42a5f5', dark: '#1565c0' },
+    purple: { main: '#7e57c2', light: '#b39ddb', dark: '#5e35b1' },
+    green: { main: '#2e7d32', light: '#66bb6a', dark: '#1b5e20' },
+    orange: { main: '#ef6c00', light: '#ffb74d', dark: '#e65100' },
+    red: { main: '#d32f2f', light: '#ef5350', dark: '#c62828' },
   };
+  const primary = primaryMap[accent] || primaryMap.blue;
 
-  const lightTheme = createTheme({
+  const baseTheme = useMemo(() => createTheme({
     palette: {
-      mode: 'light',
-      primary: {
-        main: '#1565C0',
-        light: '#42A5F5',
-        dark: '#0D47A1',
-      },
-      secondary: {
-        main: '#FF5722',
-        light: '#FF8A65',
-        dark: '#D84315',
-      },
-      background: {
+      mode: isDark ? 'dark' : 'light',
+      primary,
+      secondary: { main: isDark ? '#FF7043' : '#FF5722' },
+      background: isDark ? {
+        default: '#121212',
+        paper: '#1e1e1e',
+      } : {
         default: '#f5f5f5',
         paper: '#ffffff',
       },
-    },
-    components: {
-      // Remove global AppBar background override to ensure proper contrast when using color="default"
-      MuiAppBar: {
-        styleOverrides: {
-          root: {
-            background: undefined
-          }
-        }
-      }
-    }
-  });
-
-  const darkTheme = createTheme({
-    palette: {
-      mode: 'dark',
-      primary: {
-        main: '#42A5F5',
-        light: '#90CAF9',
-        dark: '#1565C0',
-      },
-      secondary: {
-        main: '#FF7043',
-        light: '#FFAB91',
-        dark: '#D84315',
-      },
-      background: {
-        default: '#121212',
-        paper: '#1e1e1e',
-      },
-      text: {
+      text: isDark ? {
         primary: '#ffffff',
         secondary: '#b0b0b0',
-      },
+      } : undefined,
     },
     components: {
-      // Remove global AppBar background override for dark as well
-      MuiAppBar: {
-        styleOverrides: {
-          root: {
-            background: undefined,
-          },
-        },
-      },
-      MuiCard: {
-        styleOverrides: {
-          root: {
-            backgroundColor: '#2a2a2a',
-            borderColor: '#404040',
-          },
-        },
-      },
+      MuiAppBar: { styleOverrides: { root: { background: undefined } } },
+      MuiCard: isDark ? { styleOverrides: { root: { backgroundColor: '#2a2a2a', borderColor: '#404040' } } } : undefined,
       MuiChip: {
-        styleOverrides: {
-          root: {
-            '&.MuiChip-colorError': {
-              backgroundColor: '#d32f2f',
-              color: '#ffffff',
-            },
-          },
-        },
+        styleOverrides: { root: { '&.MuiChip-colorError': { backgroundColor: '#d32f2f', color: '#ffffff' } } }
       },
+      MuiButton: { defaultProps: { disableElevation: true } },
     },
-  });
-
-  const theme = isDarkMode ? darkTheme : lightTheme;
+  }), [isDark, accent]);
 
   return (
-    <ThemeContext.Provider value={{ isDarkMode, toggleDarkMode, theme }}>
+    <ThemeContext.Provider value={{
+      isDarkMode: isDark,
+      themeMode,
+      setThemeMode,
+      accent,
+      setAccent,
+      theme: baseTheme,
+    }}>
       {children}
     </ThemeContext.Provider>
   );

@@ -54,12 +54,19 @@ const userSchema = new mongoose.Schema({
     },
     notifications: {
       matchReminders: { type: Boolean, default: true },
+      reminderMinutes: { type: Number, default: 30 },
+      teamAlerts: { type: Boolean, default: true },
       newsUpdates: { type: Boolean, default: false },
       emailAlerts: { type: Boolean, default: false },
     },
     appearance: {
-      darkMode: { type: Boolean, default: false },
+      darkMode: { type: Boolean, default: false }, // legacy toggle
+      themeMode: { type: String, enum: ['system', 'light', 'dark'], default: 'system' },
+      accentColor: { type: String, default: 'blue' },
       density: { type: String, enum: ['comfortable', 'compact'], default: 'comfortable' },
+    },
+    behavior: {
+      defaultLanding: { type: String, enum: ['live', 'upcoming', 'my-teams'], default: 'live' },
     },
   },
   createdAt: {
