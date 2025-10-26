@@ -19,18 +19,23 @@ exports.createGoogleCalendarEvent = async (user, eventData) => {
     );
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
+    const tz = user.preferences?.timezone || 'Asia/Kolkata';
+    const enableRem = user.preferences?.notifications?.matchReminders;
+    const minutes = user.preferences?.notifications?.reminderMinutes ?? 30;
+
     const googleEvent = {
       summary: eventData.title,
       description: `${eventData.sport} match: ${eventData.teams?.away || eventData.teams?.[1] || ''} vs ${eventData.teams?.home || eventData.teams?.[0] || ''}\n${eventData.description || ''}`,
       start: {
         dateTime: eventData.startTime,
-        timeZone: 'Asia/Kolkata',
+        timeZone: tz,
       },
       end: {
         dateTime: eventData.endTime,
-        timeZone: 'Asia/Kolkata',
+        timeZone: tz,
       },
       location: eventData.location,
+      reminders: enableRem ? { useDefault: false, overrides: [{ method: 'popup', minutes }] } : undefined,
     };
 
     const response = await calendar.events.insert({
@@ -64,18 +69,23 @@ exports.updateGoogleCalendarEvent = async (user, googleEventId, eventData) => {
   );
   const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
+  const tz = user.preferences?.timezone || 'Asia/Kolkata';
+  const enableRem = user.preferences?.notifications?.matchReminders;
+  const minutes = user.preferences?.notifications?.reminderMinutes ?? 30;
+
   const googleEvent = {
     summary: eventData.title,
     description: `${eventData.sport} match: ${eventData.teams?.away || eventData.teams?.[1] || ''} vs ${eventData.teams?.home || eventData.teams?.[0] || ''}\n${eventData.description || ''}`,
     start: {
       dateTime: eventData.startTime,
-      timeZone: 'Asia/Kolkata',
+      timeZone: tz,
     },
     end: {
       dateTime: eventData.endTime,
-      timeZone: 'Asia/Kolkata',
+      timeZone: tz,
     },
     location: eventData.location,
+    reminders: enableRem ? { useDefault: false, overrides: [{ method: 'popup', minutes }] } : undefined,
   };
 
   await calendar.events.update({

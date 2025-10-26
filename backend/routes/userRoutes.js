@@ -54,3 +54,16 @@ router.put('/me', async (req, res) => {
 });
 
 module.exports = router;
+ 
+// Disconnect Google Calendar (remove stored tokens)
+router.delete('/me/google-calendar', async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    user.googleCalendarToken = undefined;
+    await user.save();
+    res.json({ success: true, message: 'Disconnected Google Calendar' });
+  } catch (e) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
