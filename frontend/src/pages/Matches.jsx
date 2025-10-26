@@ -41,8 +41,8 @@ const Matches = () => {
   const navigate = useNavigate();
   const { teamId } = useParams();
   const location = useLocation();
-  const { sportId, leagueCode } = location.state || {};
-  const [tabValue, setTabValue] = useState(0);
+  const { sportId, leagueCode, initialTab } = location.state || {};
+  const [tabValue, setTabValue] = useState(initialTab !== undefined ? initialTab : 0);
   const [searchTerm, setSearchTerm] = useState('');
   const [matches, setMatches] = useState({
     live: [],
@@ -535,6 +535,33 @@ const Matches = () => {
                 </Typography>
               </Box>
             </Box>
+
+            {/* Score for live matches */}
+            {match.isLive && (match.homeScore || match.awayScore) && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: 700,
+                    color: 'text.primary',
+                  }}
+                >
+                  {match.awayScore || 0}
+                </Typography>
+                <Typography variant="h5" sx={{ mx: 2, color: 'text.secondary' }}>
+                  -
+                </Typography>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: 700,
+                    color: 'text.primary',
+                  }}
+                >
+                  {match.homeScore || 0}
+                </Typography>
+              </Box>
+            )}
 
             {/* Score for completed matches */}
             {match.final && (match.homeScore || match.awayScore) && (

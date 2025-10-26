@@ -88,21 +88,10 @@ const Dashboard = () => {
 
   // Fetch real sports data
   useEffect(() => {
-    // If not SPA navigation (i.e., full page reload), clear cache and fetch fresh data
-    if (!sessionStorage.getItem('dashboard_spa_nav')) {
-      localStorage.removeItem('dashboard_liveGames');
-      localStorage.removeItem('dashboard_upcomingGames');
-    }
-    // If SPA navigation, use cache
-    const spaNav = sessionStorage.getItem('dashboard_spa_nav');
-    const cachedLiveGames = localStorage.getItem('dashboard_liveGames');
-    const cachedUpcomingGames = localStorage.getItem('dashboard_upcomingGames');
-    if (spaNav && cachedLiveGames && cachedUpcomingGames) {
-      setLiveGames(JSON.parse(cachedLiveGames));
-      setUpcomingGames(JSON.parse(cachedUpcomingGames));
-      setLoading(false);
-      return;
-    }
+    // Clear cache to fetch fresh data (temporary - for debugging)
+    localStorage.removeItem('dashboard_liveGames');
+    localStorage.removeItem('dashboard_upcomingGames');
+    sessionStorage.removeItem('dashboard_spa_nav');
     
     // Fetch fresh data
     const fetchSportsData = async () => {
@@ -214,8 +203,7 @@ const Dashboard = () => {
             const aDate = new Date(a.date + (a.time ? 'T' + a.time : ''));
             const bDate = new Date(b.date + (b.time ? 'T' + b.time : ''));
             return aDate - bDate;
-          })
-          .slice(0, 3);
+          });
           
         setLiveGames(live);
         setUpcomingGames(upcoming);
@@ -589,7 +577,8 @@ const Dashboard = () => {
                     </Typography>
                   </Box>
                 ) : (
-                  liveGames.map((game) => (
+                  <>
+                    {liveGames.slice(0, 4).map((game) => (
                     <Card 
                       key={game.id}
                       sx={{ 
@@ -623,7 +612,7 @@ const Dashboard = () => {
                       }}
                     >
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1 }}>
                           <Avatar 
                             sx={{ 
                               bgcolor: getSportColor(game.sport),
@@ -633,7 +622,7 @@ const Dashboard = () => {
                           >
                             {getSportIcon(game.sport)}
                           </Avatar>
-                          <Box>
+                          <Box sx={{ flex: 1 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                               <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                                 {game.awayTeam} @ {game.homeTeam}
@@ -660,10 +649,52 @@ const Dashboard = () => {
                           </Box>
                         </Box>
                         
-                        {/* Removed Add to Calendar button from ongoing matches */}
+                        {/* Live Score Display */}
+                        {game.isLive && (game.homeScore || game.awayScore) && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
+                            <Typography 
+                              variant="h6" 
+                              sx={{ 
+                                fontWeight: 700,
+                                color: 'text.primary',
+                                minWidth: 30,
+                                textAlign: 'center',
+                              }}
+                            >
+                              {game.awayScore || 0}
+                            </Typography>
+                            <Typography variant="h6" sx={{ color: 'text.secondary' }}>
+                              -
+                            </Typography>
+                            <Typography 
+                              variant="h6" 
+                              sx={{ 
+                                fontWeight: 700,
+                                color: 'text.primary',
+                                minWidth: 30,
+                                textAlign: 'center',
+                              }}
+                            >
+                              {game.homeScore || 0}
+                            </Typography>
+                          </Box>
+                        )}
                       </Box>
                     </Card>
-                  ))
+                  ))}
+
+                  {/* See all live matches button */}
+                  {liveGames.length > 0 && (
+                    <Button 
+                      variant="text" 
+                      fullWidth 
+                      sx={{ mt: 2 }}
+                      onClick={() => navigate('/matches', { state: { initialTab: 0 } })}
+                    >
+                      See All Live Matches
+                    </Button>
+                  )}
+                </>
                 )}
               </Box>
             </CardContent>
@@ -695,7 +726,8 @@ const Dashboard = () => {
                     </Typography>
                   </Box>
                 ) : (
-                  upcomingGames.map((game) => (
+                  <>
+                    {upcomingGames.slice(0, 4).map((game) => (
                     <Card 
                       key={game.id}
                       sx={{ 
@@ -759,17 +791,23 @@ const Dashboard = () => {
                         </Button>
                       </Box>
                     </Card>
-                  ))
+                  ))}
+
+                  {/* See all upcoming matches button */}
+                  {upcomingGames.length > 0 && (
+                    <Button 
+                      variant="text" 
+                      fullWidth 
+                      sx={{ mt: 2 }}
+                      onClick={() => navigate('/matches', { state: { initialTab: 2 } })}
+                    >
+                      See All Upcoming Matches
+                    </Button>
+                  )}
+                </>
                 )}
 
-                <Button 
-                  variant="text" 
-                  fullWidth 
-                  sx={{ mt: 2 }}
-                  onClick={() => navigate('/sports')}
-                >
-                  Explore More Sports
-                </Button>
+                {/* Removed "Explore More Sports" button as we now have "See All Upcoming Matches" */}
               </Box>
             </CardContent>
           </Card>
