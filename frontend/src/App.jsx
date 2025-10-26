@@ -46,6 +46,49 @@ function OAuthHandler() {
   return null;
 }
 
+function AppLayout() {
+  const location = useLocation();
+  
+  // Routes that should NOT show navbar/sidebar (public routes)
+  const publicRoutes = ['/login', '/register', '/auth/google/callback'];
+  const isPublicRoute = publicRoutes.includes(location.pathname);
+
+  if (isPublicRoute) {
+    // Render only the page content without navbar/sidebar
+    return (
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/auth/google/callback" element={<OAuthHandler />} />
+      </Routes>
+    );
+  }
+
+  // Render with navbar/sidebar for authenticated routes
+  return (
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      <Sidebar />
+      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+        <Navbar />
+        <Box component="main" sx={{ flexGrow: 1, p: 3, backgroundColor: 'background.default' }}>
+          <Routes>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/sports" element={<Sports />} />
+            <Route path="/teams/:sportId" element={<Teams />} />
+            <Route path="/matches" element={<Matches />} />
+            <Route path="/matches/:teamId" element={<Matches />} />
+            <Route path="/calendar" element={<Calendar />} />
+            <Route path="/test-cricket" element={<TestCricketMatch />} />
+            <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+            <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
+            <Route path="/" element={<Navigate to="/dashboard" />} />
+          </Routes>
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
 function AppContent() {
   const { theme } = useTheme();
 
@@ -55,29 +98,7 @@ function AppContent() {
       <AuthProvider>
         {/* Opt-in to v7 behavior to silence warnings */}
         <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-            <Sidebar />
-            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-              <Navbar />
-              <Box component="main" sx={{ flexGrow: 1, p: 3, backgroundColor: 'background.default' }}>
-                <Routes>
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/sports" element={<Sports />} />
-                  <Route path="/teams/:sportId" element={<Teams />} />
-                  <Route path="/matches" element={<Matches />} />
-                  <Route path="/matches/:teamId" element={<Matches />} />
-                  <Route path="/calendar" element={<Calendar />} />
-                  <Route path="/test-cricket" element={<TestCricketMatch />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
-                  <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
-                  <Route path="/auth/google/callback" element={<OAuthHandler />} />
-                  <Route path="/" element={<Navigate to="/dashboard" />} />
-                </Routes>
-              </Box>
-            </Box>
-          </Box>
+          <AppLayout />
         </Router>
       </AuthProvider>
     </ThemeProvider>
