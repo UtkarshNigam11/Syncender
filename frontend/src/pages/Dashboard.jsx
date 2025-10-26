@@ -291,90 +291,270 @@ const Dashboard = () => {
         <>
           {/* Stats Cards */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
+            {/* Ongoing Matches Card */}
             <Grid item xs={12} sm={6} md={3}>
               <Card
+                onClick={() => {
+                  if (liveGames.length > 0) {
+                    // Scroll to ongoing matches section
+                    document.getElementById('ongoing-matches-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
                 sx={{
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
-                  height: '100%',
+                  height: '180px',
+                  cursor: liveGames.length > 0 ? 'pointer' : 'default',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  borderRadius: 4,
+                  '&:hover': {
+                    transform: 'translateY(-8px)',
+                    boxShadow: '0 12px 40px rgba(102, 126, 234, 0.4)',
+                  },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    width: '200px',
+                    height: '200px',
+                    background: 'radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)',
+                    borderRadius: '50%',
+                    transform: 'translate(50%, -50%)',
+                  },
                 }}
               >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="h3" sx={{ fontWeight: 800, mb: 1 }}>
-                        {liveGames.length}
-                      </Typography>
-                      <Typography variant="body2">Ongoing</Typography>
+                <CardContent sx={{ position: 'relative', zIndex: 1, p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                    <Box
+                      sx={{
+                        bgcolor: 'rgba(255, 255, 255, 0.2)',
+                        borderRadius: 2,
+                        p: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <TrendingUp sx={{ fontSize: 28 }} />
                     </Box>
-                    <TrendingUp sx={{ fontSize: 40, opacity: 0.8 }} />
+                    {liveGames.length > 0 && (
+                      <Box
+                        sx={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: '50%',
+                          bgcolor: '#ff4444',
+                          animation: 'pulse 2s infinite',
+                          boxShadow: '0 0 0 0 rgba(255, 68, 68, 1)',
+                          '@keyframes pulse': {
+                            '0%': {
+                              boxShadow: '0 0 0 0 rgba(255, 68, 68, 0.7)',
+                            },
+                            '70%': {
+                              boxShadow: '0 0 0 10px rgba(255, 68, 68, 0)',
+                            },
+                            '100%': {
+                              boxShadow: '0 0 0 0 rgba(255, 68, 68, 0)',
+                            },
+                          },
+                        }}
+                      />
+                    )}
                   </Box>
+                  <Typography variant="h2" sx={{ fontWeight: 800, mb: 0.5, fontSize: '2.5rem', textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+                    {liveGames.length}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.95, fontWeight: 500, fontSize: '0.875rem' }}>
+                    Ongoing Matches
+                  </Typography>
+                  {liveGames.length > 0 && (
+                    <Typography variant="caption" sx={{ opacity: 0.8, mt: 0.5, display: 'block', fontSize: '0.7rem' }}>
+                      Click to view live games
+                    </Typography>
+                  )}
                 </CardContent>
               </Card>
             </Grid>
 
+            {/* Upcoming Matches Card */}
             <Grid item xs={12} sm={6} md={3}>
               <Card
+                onClick={() => {
+                  if (upcomingGames.length > 0) {
+                    document.getElementById('upcoming-matches-section')?.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
                 sx={{
                   background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
                   color: 'white',
-                  height: '100%',
+                  height: '180px',
+                  cursor: upcomingGames.length > 0 ? 'pointer' : 'default',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  borderRadius: 4,
+                  '&:hover': {
+                    transform: upcomingGames.length > 0 ? 'translateY(-8px)' : 'none',
+                    boxShadow: upcomingGames.length > 0 ? '0 12px 40px rgba(240, 147, 251, 0.4)' : 'none',
+                  },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    width: '200px',
+                    height: '200px',
+                    background: 'radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)',
+                    borderRadius: '50%',
+                    transform: 'translate(50%, -50%)',
+                  },
                 }}
               >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="h3" sx={{ fontWeight: 800, mb: 1 }}>
-                        {upcomingGames.length}
-                      </Typography>
-                      <Typography variant="body2">Upcoming</Typography>
+                <CardContent sx={{ position: 'relative', zIndex: 1, p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                    <Box
+                      sx={{
+                        bgcolor: 'rgba(255, 255, 255, 0.2)',
+                        borderRadius: 2,
+                        p: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Schedule sx={{ fontSize: 28 }} />
                     </Box>
-                    <Schedule sx={{ fontSize: 40, opacity: 0.8 }} />
                   </Box>
+                  <Typography variant="h2" sx={{ fontWeight: 800, mb: 0.5, fontSize: '2.5rem', textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+                    {upcomingGames.length}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.95, fontWeight: 500, fontSize: '0.875rem' }}>
+                    Upcoming Matches
+                  </Typography>
+                  {upcomingGames.length > 0 && (
+                    <Typography variant="caption" sx={{ opacity: 0.8, mt: 0.5, display: 'block', fontSize: '0.7rem' }}>
+                      Next 3 days
+                    </Typography>
+                  )}
                 </CardContent>
               </Card>
             </Grid>
 
+            {/* Sports Tracked Card */}
             <Grid item xs={12} sm={6} md={3}>
               <Card
+                onClick={() => navigate('/sports')}
                 sx={{
                   background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
                   color: 'white',
-                  height: '100%',
+                  height: '180px',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  borderRadius: 4,
+                  '&:hover': {
+                    transform: 'translateY(-8px)',
+                    boxShadow: '0 12px 40px rgba(79, 172, 254, 0.4)',
+                  },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    width: '200px',
+                    height: '200px',
+                    background: 'radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)',
+                    borderRadius: '50%',
+                    transform: 'translate(50%, -50%)',
+                  },
                 }}
               >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="h3" sx={{ fontWeight: 800, mb: 1 }}>
-                        6
-                      </Typography>
-                      <Typography variant="body2">Sports</Typography>
+                <CardContent sx={{ position: 'relative', zIndex: 1, p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                    <Box
+                      sx={{
+                        bgcolor: 'rgba(255, 255, 255, 0.2)',
+                        borderRadius: 2,
+                        p: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <SportsSoccer sx={{ fontSize: 28 }} />
                     </Box>
-                    <SportsSoccer sx={{ fontSize: 40, opacity: 0.8 }} />
                   </Box>
+                  <Typography variant="h2" sx={{ fontWeight: 800, mb: 0.5, fontSize: '2.5rem', textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+                    6
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.95, fontWeight: 500, fontSize: '0.875rem' }}>
+                    Sports Available
+                  </Typography>
+                  <Typography variant="caption" sx={{ opacity: 0.8, mt: 0.5, display: 'block', fontSize: '0.7rem' }}>
+                    Browse all sports
+                  </Typography>
                 </CardContent>
               </Card>
             </Grid>
 
+            {/* Calendar Events Card */}
             <Grid item xs={12} sm={6} md={3}>
               <Card
+                onClick={() => navigate('/calendar')}
                 sx={{
                   background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
                   color: 'white',
-                  height: '100%',
+                  height: '180px',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  borderRadius: 4,
+                  '&:hover': {
+                    transform: 'translateY(-8px)',
+                    boxShadow: '0 12px 40px rgba(250, 112, 154, 0.4)',
+                  },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    width: '200px',
+                    height: '200px',
+                    background: 'radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)',
+                    borderRadius: '50%',
+                    transform: 'translate(50%, -50%)',
+                  },
                 }}
               >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="h3" sx={{ fontWeight: 800, mb: 1 }}>
-                        0
-                      </Typography>
-                      <Typography variant="body2">Calendar Events</Typography>
+                <CardContent sx={{ position: 'relative', zIndex: 1, p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                    <Box
+                      sx={{
+                        bgcolor: 'rgba(255, 255, 255, 0.2)',
+                        borderRadius: 2,
+                        p: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <EventAvailable sx={{ fontSize: 28 }} />
                     </Box>
-                    <Add sx={{ fontSize: 40, opacity: 0.8 }} />
                   </Box>
+                  <Typography variant="h2" sx={{ fontWeight: 800, mb: 0.5, fontSize: '2.5rem', textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+                    {upcomingGames.length}
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.95, fontWeight: 500, fontSize: '0.875rem' }}>
+                    Calendar Events
+                  </Typography>
+                  <Typography variant="caption" sx={{ opacity: 0.8, mt: 0.5, display: 'block', fontSize: '0.7rem' }}>
+                    View your calendar
+                  </Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -382,7 +562,7 @@ const Dashboard = () => {
 
       <Grid container spacing={3}>
         {/* Ongoing Matches */}
-        <Grid item xs={12} lg={6}>
+        <Grid item xs={12} lg={6} id="ongoing-matches-section">
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
@@ -414,12 +594,31 @@ const Dashboard = () => {
                       key={game.id}
                       sx={{ 
                         p: 2,
-                        border: '1px solid',
+                        border: '2px solid',
                         borderColor: 'divider',
                         backgroundColor: alpha(getSportColor(game.sport), 0.02),
                         cursor: 'pointer',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        transition: 'all 0.3s ease',
                         '&:hover': {
-                          backgroundColor: alpha(getSportColor(game.sport), 0.04),
+                          backgroundColor: alpha(getSportColor(game.sport), 0.08),
+                          borderColor: alpha(getSportColor(game.sport), 0.4),
+                          transform: 'translateY(-4px)',
+                          boxShadow: `0 8px 24px ${alpha(getSportColor(game.sport), 0.25)}`,
+                        },
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: '-100%',
+                          width: '100%',
+                          height: '100%',
+                          background: `linear-gradient(90deg, transparent, ${alpha(getSportColor(game.sport), 0.15)}, transparent)`,
+                          transition: 'left 0.5s ease',
+                        },
+                        '&:hover::before': {
+                          left: '100%',
                         },
                       }}
                     >
@@ -472,7 +671,7 @@ const Dashboard = () => {
         </Grid>
 
         {/* Upcoming Games */}
-        <Grid item xs={12} lg={6}>
+        <Grid item xs={12} lg={6} id="upcoming-matches-section">
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
@@ -497,11 +696,31 @@ const Dashboard = () => {
                       key={game.id}
                       sx={{ 
                         p: 2,
-                        border: '1px solid',
+                        border: '2px solid',
                         borderColor: 'divider',
+                        backgroundColor: alpha(getSportColor(game.sport), 0.02),
                         cursor: 'pointer',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        transition: 'all 0.3s ease',
                         '&:hover': {
-                          backgroundColor: 'action.hover',
+                          backgroundColor: alpha(getSportColor(game.sport), 0.08),
+                          borderColor: alpha(getSportColor(game.sport), 0.4),
+                          transform: 'translateY(-4px)',
+                          boxShadow: `0 8px 24px ${alpha(getSportColor(game.sport), 0.25)}`,
+                        },
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: '-100%',
+                          width: '100%',
+                          height: '100%',
+                          background: `linear-gradient(90deg, transparent, ${alpha(getSportColor(game.sport), 0.15)}, transparent)`,
+                          transition: 'left 0.5s ease',
+                        },
+                        '&:hover::before': {
+                          left: '100%',
                         },
                       }}
                     >
