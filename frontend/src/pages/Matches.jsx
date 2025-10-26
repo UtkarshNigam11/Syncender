@@ -75,73 +75,144 @@ const Matches = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        // If we came from a team selection, attempt to fetch real data
-        if (teamId && sportId) {
-          let events = [];
-          if (sportId === 'soccer') {
-            // Fetch EPL and/or UCL depending on leagueCode; combine and filter
-            const leagues = leagueCode ? [leagueCode] : ['eng.1', 'uefa.champions'];
-            const responses = await Promise.all(
-              leagues.map((code) => axios.get(`http://localhost:5000/api/sports/scores/soccer/${code}`))
-            );
-            responses.forEach((res) => {
-              const data = res.data?.data;
-              if (data?.events) events.push(...data.events);
-            });
-          } else {
-            // Generic ESPN sports
-            const res = await axios.get(`http://localhost:5000/api/sports/scores/${sportId}`);
-            const data = res.data?.data;
-            if (data?.events) events = data.events;
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const threeDaysLater = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000);
+
+        // Helper to check if a match is live
+        const isCricketLive = (event) => {
+          const status = (event.strStatus || event.status || '').toLowerCase();
+          return status.includes('live') || status.includes('in progress') || status.includes('inplay') || status.includes('running');
+        };
+
+        // Helper to parse cricket match data
+        const parseCricketMatch = (event, index) => {
+          const matchDate = event.dateEvent ? new Date(event.dateEvent + (event.strTime ? 'T' + event.strTime : '')) : null;
+          const isLive = isCricketLive(event);
+          const dateOnly = matchDate ? new Date(matchDate.getFullYear(), matchDate.getMonth(), matchDate.getDate()) : null;
+          const isToday = dateOnly && dateOnly.getTime() === today.getTime();
+          const isUpcoming = dateOnly && dateOnly > today && dateOnly <= threeDaysLater && !isLive;
+          const isCompleted = event.strStatus && (event.strStatus.toLowerCase().includes('finished') || event.strStatus.toLowerCase().includes('complete'));
+
+          return {
+            id: `cricket-${index}`,
+            sport: 'Cricket',
+            homeTeam: event.strHomeTeam || event.team1 || 'Home Team',
+            awayTeam: event.strAwayTeam || event.team2 || 'Away Team',
+            homeScore: event.intHomeScore || event.strHomeScore || '0',
+            awayScore: event.intAwayScore || event.strAwayScore || '0',
+            status: event.strStatus || event.status || 'Scheduled',
+            venue: event.strVenue || 'TBD',
+            date: event.dateEvent,
+            time: event.strTime,
+            league: event.strLeague || event.leagueInfo?.name || 'Cricket',
+            isLive,
+            isToday,
+            isUpcoming,
+            final: isCompleted,
+          };
+        };
+
+        // Helper to parse ESPN-style events
+        const parseESPNEvent = (event, sportName, index) => {
+          const state = event.status?.type?.state;
+          const statusName = event.status?.type?.name;
+          const isLive = state === 'in' || state === 'live' || state === 'inprogress' || statusName === 'STATUS_IN_PROGRESS' || statusName === 'STATUS_LIVE';
+          const isPost = state === 'post' || statusName === 'STATUS_FINAL' || statusName === 'STATUS_FULL_TIME';
+          const dateISO = event.date;
+          const date = new Date(dateISO);
+          const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+          const isToday = dateOnly.getTime() === today.getTime();
+          const isUpcoming = dateOnly > today && dateOnly <= threeDaysLater && !isLive && !isPost;
+
+          const competitors = event.competitions?.[0]?.competitors || [];
+          const homeCompetitor = competitors.find(c => c.homeAway === 'home');
+          const awayCompetitor = competitors.find(c => c.homeAway === 'away');
+
+          return {
+            id: `${sportName}-${index}`,
+            sport: sportName,
+            homeTeam: homeCompetitor?.team?.displayName || 'Home',
+            awayTeam: awayCompetitor?.team?.displayName || 'Away',
+            homeScore: homeCompetitor?.score || '0',
+            awayScore: awayCompetitor?.score || '0',
+            venue: event.competitions?.[0]?.venue?.fullName || 'TBD',
+            date: dateISO,
+            time: undefined,
+            isLive,
+            isToday,
+            isUpcoming,
+            final: isPost,
+          };
+        };
+
+        // Fetch all sports in parallel
+        const [
+          nflResponse,
+          nbaResponse,
+          eplResponse,
+          uclResponse,
+          cricketResponse
+        ] = await Promise.all([
+          axios.get('http://localhost:5000/api/sports/scores/nfl').catch(() => ({ data: { data: { events: [] } } })),
+          axios.get('http://localhost:5000/api/sports/scores/nba').catch(() => ({ data: { data: { events: [] } } })),
+          axios.get('http://localhost:5000/api/sports/scores/soccer/eng.1').catch(() => ({ data: { data: { events: [] } } })),
+          axios.get('http://localhost:5000/api/sports/scores/soccer/uefa.champions').catch(() => ({ data: { data: { events: [] } } })),
+          axios.get('http://localhost:5000/api/sports/cricket/matches').catch(() => ({ data: { matches: [] } }))
+        ]);
+
+        // Process all matches
+        const allMatches = [];
+
+        // NFL matches
+        const nflEvents = nflResponse.data?.data?.events || [];
+        nflEvents.forEach((event, i) => allMatches.push(parseESPNEvent(event, 'NFL', i)));
+
+        // NBA matches
+        const nbaEvents = nbaResponse.data?.data?.events || [];
+        nbaEvents.forEach((event, i) => allMatches.push(parseESPNEvent(event, 'NBA', i)));
+
+        // EPL matches
+        const eplEvents = eplResponse.data?.data?.events || [];
+        eplEvents.forEach((event, i) => allMatches.push(parseESPNEvent(event, 'Soccer', i)));
+
+        // UCL matches
+        const uclEvents = uclResponse.data?.data?.events || [];
+        uclEvents.forEach((event, i) => allMatches.push(parseESPNEvent(event, 'Soccer', i + eplEvents.length)));
+
+        // Cricket matches
+        const cricketMatches = cricketResponse.data?.matches || cricketResponse.data?.data || [];
+        cricketMatches.forEach((event, i) => allMatches.push(parseCricketMatch(event, i)));
+
+        // Categorize matches
+        const bucket = { live: [], today: [], upcoming: [], completed: [] };
+        allMatches.forEach((match) => {
+          if (match.isLive) {
+            bucket.live.push(match);
+          } else if (match.final) {
+            bucket.completed.push(match);
+          } else if (match.isToday) {
+            bucket.today.push(match);
+          } else if (match.isUpcoming) {
+            bucket.upcoming.push(match);
           }
+        });
 
-          // Filter events to this team
-          const filtered = (events || []).filter((evt) => {
-            const comps = evt.competitions?.[0]?.competitors || [];
-            return comps.some((c) => c.team?.id === teamId);
-          });
+        // Sort upcoming matches by date
+        bucket.upcoming.sort((a, b) => {
+          const aDate = new Date(a.date + (a.time ? 'T' + a.time : ''));
+          const bDate = new Date(b.date + (b.time ? 'T' + b.time : ''));
+          return aDate - bDate;
+        });
 
-          // Map to UI shape and categorize
-          const now = new Date();
-          const bucket = { live: [], today: [], upcoming: [], completed: [] };
-          filtered.forEach((event, i) => {
-            const state = event.status?.type?.state;
-            const statusName = event.status?.type?.name;
-            const isLive = state === 'in' || state === 'live' || state === 'inprogress' || statusName === 'STATUS_IN_PROGRESS' || statusName === 'STATUS_LIVE';
-            const isPost = state === 'post' || statusName === 'STATUS_FINAL' || statusName === 'STATUS_FULL_TIME';
-            const dateISO = event.date;
-            const date = new Date(dateISO);
-            const isToday = date.toDateString() === now.toDateString();
-            const match = {
-              id: `${sportId}-${teamId}-${i}`,
-              sport: sportId === 'soccer' ? 'Soccer' : sportId.toUpperCase(),
-              homeTeam: event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'home')?.team?.displayName || 'Home',
-              awayTeam: event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'away')?.team?.displayName || 'Away',
-              venue: event.competitions?.[0]?.venue?.fullName || 'TBD',
-              date: dateISO,
-              time: undefined,
-              isLive,
-              final: isPost,
-            };
-            if (isLive) bucket.live.push(match);
-            else if (isPost) bucket.completed.push(match);
-            else if (isToday) bucket.today.push(match);
-            else bucket.upcoming.push(match);
-          });
-
-          setMatches(bucket);
-          return;
-        }
+        setMatches(bucket);
       } catch (e) {
         console.error('Failed to load matches:', e);
+        setMatches({ live: [], today: [], upcoming: [], completed: [] });
       }
-
-      // Fallback: keep existing mock if no params/state
-      const mockMatches = { live: [], today: [], upcoming: [], completed: [] };
-      setMatches(mockMatches);
     };
     load();
-  }, [teamId, sportId, leagueCode]);
+  }, []);
 
   const getSportIcon = (sport) => {
     const icons = {
@@ -372,150 +443,186 @@ const Matches = () => {
     match.sport.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const renderMatchCard = (match) => (
-    <Grid item xs={12} md={6} lg={4} key={match.id}>
-      <Card
-        sx={{
-          height: '100%',
-          border: '1px solid',
-          borderColor: 'divider',
-          backgroundColor: match.isLive ? alpha(getSportColor(match.sport), 0.02) : 'background.paper',
-          '&:hover': {
-            borderColor: getSportColor(match.sport),
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
-          },
-        }}
-      >
-        <CardContent sx={{ p: 3 }}>
-          {/* Header */}
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Avatar
-                sx={{
-                  bgcolor: getSportColor(match.sport),
-                  width: 32,
-                  height: 32,
-                }}
-              >
-                {getSportIcon(match.sport)}
-              </Avatar>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {match.sport}
+  const renderMatchCard = (match) => {
+    // Determine if we should show action buttons (only for Today and Upcoming tabs)
+    const showAddToCalendar = !match.isLive && !match.final;
+    
+    return (
+      <Grid item xs={12} md={6} lg={4} key={match.id}>
+        <Card
+          sx={{
+            height: '100%',
+            border: '1px solid',
+            borderColor: 'divider',
+            backgroundColor: match.isLive ? alpha(getSportColor(match.sport), 0.02) : 'background.paper',
+            '&:hover': {
+              borderColor: getSportColor(match.sport),
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)',
+            },
+          }}
+        >
+          <CardContent sx={{ p: 3, display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {/* Header */}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar
+                  sx={{
+                    bgcolor: getSportColor(match.sport),
+                    width: 32,
+                    height: 32,
+                  }}
+                >
+                  {getSportIcon(match.sport)}
+                </Avatar>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {match.sport}
+                </Typography>
+              </Box>
+              
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {match.isLive && (
+                  <Chip 
+                    label="LIVE" 
+                    size="small" 
+                    sx={{ 
+                      bgcolor: 'error.main', 
+                      color: 'white',
+                      fontSize: '0.7rem',
+                      animation: 'pulse 2s infinite',
+                    }} 
+                  />
+                )}
+                <IconButton
+                  size="small"
+                  onClick={() => toggleFavorite(match.id)}
+                >
+                  {favorites.has(match.id) ? <Star color="warning" /> : <StarBorder />}
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={(e) => setAnchorEl(e.currentTarget)}
+                >
+                  <MoreVert />
+                </IconButton>
+              </Box>
+            </Box>
+
+            {/* Teams */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 3, textAlign: 'center', flexGrow: 1 }}>
+              <Box sx={{ flex: 1 }}>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: match.final && match.homeScore > match.awayScore ? 700 : 600,
+                    color: match.final && match.homeScore < match.awayScore ? 'text.disabled' : 'text.primary',
+                  }}
+                >
+                  {match.awayTeam}
+                </Typography>
+              </Box>
+              <Typography variant="body1" color="text.secondary" sx={{ mx: 2 }}>
+                vs
+              </Typography>
+              <Box sx={{ flex: 1 }}>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: match.final && match.awayScore > match.homeScore ? 700 : 600,
+                    color: match.final && match.awayScore < match.homeScore ? 'text.disabled' : 'text.primary',
+                  }}
+                >
+                  {match.homeTeam}
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Score for completed matches */}
+            {match.final && (match.homeScore || match.awayScore) && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: match.homeScore > match.awayScore ? 700 : 400,
+                    color: match.homeScore < match.awayScore ? 'text.disabled' : 'text.primary',
+                  }}
+                >
+                  {match.awayScore || 0}
+                </Typography>
+                <Typography variant="h5" sx={{ mx: 2, color: 'text.secondary' }}>
+                  -
+                </Typography>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: match.awayScore > match.homeScore ? 700 : 400,
+                    color: match.awayScore < match.homeScore ? 'text.disabled' : 'text.primary',
+                  }}
+                >
+                  {match.homeScore || 0}
+                </Typography>
+              </Box>
+            )}
+
+            {/* Match Info */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                {match.venue}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {match.isLive 
+                  ? `Live` 
+                  : match.final 
+                    ? `Final - ${match.date}`
+                    : `${match.date} ${match.time || ''}`
+                }
               </Typography>
             </Box>
-            
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {match.isLive && (
-                <Chip 
-                  label="LIVE" 
-                  size="small" 
-                  sx={{ 
-                    bgcolor: 'error.main', 
-                    color: 'white',
-                    fontSize: '0.7rem',
-                    animation: 'pulse 2s infinite',
-                  }} 
-                />
-              )}
-              <IconButton
-                size="small"
-                onClick={() => toggleFavorite(match.id)}
-              >
-                {favorites.has(match.id) ? <Star color="warning" /> : <StarBorder />}
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={(e) => setAnchorEl(e.currentTarget)}
-              >
-                <MoreVert />
-              </IconButton>
-            </Box>
-          </Box>
 
-          {/* Teams */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 3, textAlign: 'center' }}>
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              {match.awayTeam}
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mx: 2 }}>
-              vs
-            </Typography>
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              {match.homeTeam}
-            </Typography>
-          </Box>
-
-          {/* Match Info */}
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-              {match.venue}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {match.isLive 
-                ? `Live` 
-                : match.final 
-                  ? `Final - ${match.date}`
-                  : `${match.date} ${match.time || ''}`
-              }
-            </Typography>
-          </Box>
-
-          {/* Actions */}
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant="outlined"
-              size="small"
-              fullWidth
-              startIcon={<CalendarToday />}
-              onClick={(e) => setCalendarMenuEl(e.currentTarget)}
-              disabled={isAddingToCalendar}
-              sx={{
-                borderColor: getSportColor(match.sport),
-                color: getSportColor(match.sport),
-                '&:hover': {
-                  backgroundColor: alpha(getSportColor(match.sport), 0.08),
-                },
-              }}
-            >
-              {isAddingToCalendar ? 'Adding...' : 'Add to Calendar'}
-            </Button>
-            <Menu
-              anchorEl={calendarMenuEl}
-              open={Boolean(calendarMenuEl)}
-              onClose={() => setCalendarMenuEl(null)}
-            >
-              <MenuItem onClick={() => {
-                addToCalendar(match, 'google');
-                setCalendarMenuEl(null);
-              }}>
-                Google Calendar
-              </MenuItem>
-              <MenuItem onClick={() => {
-                addToCalendar(match, 'apple');
-                setCalendarMenuEl(null);
-              }}>
-                Apple Calendar
-              </MenuItem>
-            </Menu>
-            {match.isLive && (
-              <Button
-                variant="contained"
-                size="small"
-                startIcon={<PlayArrow />}
-                sx={{
-                  backgroundColor: getSportColor(match.sport),
-                  minWidth: 'auto',
-                  px: 2,
-                }}
-              >
-                Watch
-              </Button>
+            {/* Actions - Only show for Today and Upcoming tabs */}
+            {showAddToCalendar && (
+              <Box sx={{ mt: 'auto' }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  startIcon={<CalendarToday />}
+                  onClick={(e) => setCalendarMenuEl(e.currentTarget)}
+                  disabled={isAddingToCalendar}
+                  sx={{
+                    borderColor: getSportColor(match.sport),
+                    color: getSportColor(match.sport),
+                    '&:hover': {
+                      backgroundColor: alpha(getSportColor(match.sport), 0.08),
+                    },
+                  }}
+                >
+                  {isAddingToCalendar ? 'Adding...' : 'Add to Calendar'}
+                </Button>
+                <Menu
+                  anchorEl={calendarMenuEl}
+                  open={Boolean(calendarMenuEl)}
+                  onClose={() => setCalendarMenuEl(null)}
+                >
+                  <MenuItem onClick={() => {
+                    addToCalendar(match, 'google');
+                    setCalendarMenuEl(null);
+                  }}>
+                    Google Calendar
+                  </MenuItem>
+                  <MenuItem onClick={() => {
+                    addToCalendar(match, 'apple');
+                    setCalendarMenuEl(null);
+                  }}>
+                    Apple Calendar
+                  </MenuItem>
+                </Menu>
+              </Box>
             )}
-          </Box>
-        </CardContent>
-      </Card>
-    </Grid>
-  );
+          </CardContent>
+        </Card>
+      </Grid>
+    );
+  };
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>

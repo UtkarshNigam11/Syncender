@@ -678,9 +678,13 @@ const Dashboard = () => {
                 <Typography variant="h5" sx={{ fontWeight: 600 }}>
                   Upcoming
                 </Typography>
-                <IconButton size="small">
-                  <MoreVert />
-                </IconButton>
+                <Button 
+                  variant="outlined" 
+                  size="small"
+                  onClick={() => navigate('/matches')}
+                >
+                  View All
+                </Button>
               </Box>
 
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
