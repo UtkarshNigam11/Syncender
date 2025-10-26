@@ -35,10 +35,13 @@ export const CustomThemeProvider = ({ children }) => {
   const [themeMode, _setThemeMode] = useState(() => normalizeMode(localStorage.getItem('themeMode') || 'system'));
   // Accent color: choose from palette keys
   const [accent, setAccent] = useState(() => localStorage.getItem('accentColor') || 'blue');
+  // Density: 'comfortable' | 'compact'
+  const [density, setDensity] = useState(() => localStorage.getItem('density') || 'comfortable');
 
   // Persist normalized theme mode
   useEffect(() => { localStorage.setItem('themeMode', themeMode); }, [themeMode]);
   useEffect(() => { localStorage.setItem('accentColor', accent); }, [accent]);
+  useEffect(() => { localStorage.setItem('density', density); }, [density]);
 
   // Resolve system preference
   const prefersDark = useMemo(() => window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches, []);
@@ -72,6 +75,9 @@ export const CustomThemeProvider = ({ children }) => {
       palette.text = { primary: '#ffffff', secondary: '#b0b0b0' };
     }
 
+    // Density-based spacing
+    const spacing = density === 'compact' ? 6 : 8;
+
     const components = {
       MuiAppBar: { styleOverrides: { root: { background: undefined } } },
       MuiChip: {
@@ -80,13 +86,16 @@ export const CustomThemeProvider = ({ children }) => {
         },
       },
       MuiButton: { defaultProps: { disableElevation: true } },
+      MuiFormControl: { styleOverrides: { root: { marginTop: spacing / 2, marginBottom: spacing / 2 } } },
+      MuiInputBase: { styleOverrides: { input: { padding: density === 'compact' ? '6px 8px' : '10px 14px' } } },
+      MuiGrid: { styleOverrides: { root: { marginTop: spacing / 2, marginBottom: spacing / 2 } } },
     };
     if (isDark) {
       components.MuiCard = { styleOverrides: { root: { backgroundColor: '#2a2a2a', borderColor: '#404040' } } };
     }
 
-    return createTheme({ palette, components });
-  }, [isDark, accent]);
+    return createTheme({ palette, components, spacing });
+  }, [isDark, accent, density]);
 
   return (
     <ThemeContext.Provider value={{
@@ -96,6 +105,8 @@ export const CustomThemeProvider = ({ children }) => {
       toggleDarkMode,
       accent,
       setAccent,
+      density,
+      setDensity,
       theme: baseTheme,
     }}>
       {children}

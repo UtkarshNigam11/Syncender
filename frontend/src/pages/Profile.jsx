@@ -135,8 +135,8 @@ const Profile = () => {
             <Grid item xs={12}>
               <Typography variant="subtitle2" color="text.secondary">Linked accounts</Typography>
               <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                <Chip label={calendarConnected ? 'Google Connected' : 'Google Disconnected'} color={calendarConnected ? 'success' : 'default'} />
-                <Chip label="Apple (Not connected)" variant="outlined" />
+                <Chip label={calendarConnected ? 'Google Connected' : 'Google Disconnected'} color="primary" />
+                <Chip label="Apple (Not connected)" color="primary" variant="outlined" />
               </Stack>
             </Grid>
           </Grid>
@@ -156,30 +156,30 @@ const Profile = () => {
         </SectionCard>
 
         {/* Calendar Connection */}
-        <SectionCard title="Calendar Connection" subtitle="Connect your Google Calendar to sync events." action={!calendarConnected ? <Button variant="contained" startIcon={<GoogleIcon />} onClick={connectGoogle}>Connect</Button> : <Button variant="outlined" color="error" onClick={disconnectGoogle}>Disconnect</Button>}>
+  <SectionCard title="Calendar Connection" subtitle="Connect your Google Calendar to sync events." action={!calendarConnected ? <Button variant="contained" startIcon={<GoogleIcon />} onClick={connectGoogle}>Connect</Button> : <Button variant="outlined" color="error" onClick={disconnectGoogle}>Disconnect</Button>}>
           <Stack direction="row" spacing={2} alignItems="center">
-            <Chip label={calendarConnected ? 'Connected' : 'Not connected'} color={calendarConnected ? 'success' : 'default'} />
+            <Chip label={calendarConnected ? 'Connected' : 'Not connected'} color="primary" />
           </Stack>
         </SectionCard>
 
         {/* Subscription */}
         <SectionCard title="Subscription" subtitle="Your current plan and benefits.">
           <Stack direction="row" spacing={2} alignItems="center">
-            <Chip label={(plan?.plan || 'free').toUpperCase()} color={plan?.plan === 'pro' ? 'success' : 'default'} />
+            <Chip label={(plan?.plan || 'free').toUpperCase()} color="primary" />
             <Typography variant="body2" color="text.secondary">Next billing: {plan.planExpiresAt ? new Date(plan.planExpiresAt).toLocaleDateString() : '—'}</Typography>
           </Stack>
           <Alert severity="info" sx={{ mt: 2 }}>Billing and payments are placeholders for now.</Alert>
         </SectionCard>
 
         {/* Security */}
-        <SectionCard title="Security" subtitle="Change password or logout sessions." action={<Button variant="contained" onClick={changePassword}>Save password</Button>}>
+  <SectionCard title="Security" subtitle="Change password or logout sessions." action={<Button variant="contained" onClick={changePassword}>Save password</Button>}>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}><TextField type="password" label="Current password" fullWidth value={passwords.password} onChange={(e) => setPasswords({ ...passwords, password: e.target.value })} /></Grid>
             <Grid item xs={12} sm={3}><TextField type="password" label="New password" fullWidth value={passwords.newPassword} onChange={(e) => setPasswords({ ...passwords, newPassword: e.target.value })} /></Grid>
             <Grid item xs={12} sm={3}><TextField type="password" label="Confirm new password" fullWidth value={passwords.confirmPassword} onChange={(e) => setPasswords({ ...passwords, confirmPassword: e.target.value })} /></Grid>
             <Grid item xs={12}>
               <Stack direction="row" spacing={2}>
-                <Button variant="outlined" color="warning" onClick={logoutAll}>Logout all devices</Button>
+                <Button variant="outlined" color="error" onClick={logoutAll}>Logout all devices</Button>
                 <Button variant="outlined" color="error" onClick={logout}>Logout</Button>
               </Stack>
             </Grid>

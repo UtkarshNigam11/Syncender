@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useContext } from 'react';
 import { Container, Paper, Typography, Box, Button, Chip, Divider, Grid, Select, MenuItem, FormControl, InputLabel, Alert, Switch, FormControlLabel, TextField, Tabs, Tab, Stack, Tooltip } from '@mui/material';
 import { AuthContext } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import axios from 'axios';
 import GoogleIcon from '@mui/icons-material/Google';
 
@@ -19,6 +20,7 @@ const Section = ({ title, children, description, action }) => (
 
 const Settings = () => {
   const { token, getSubscription } = useContext(AuthContext);
+  const { isDarkMode, setThemeMode, density, setDensity } = useTheme();
   const [sub, setSub] = useState(null);
   const [me, setMe] = useState(null);
   const [activeTab, setActiveTab] = useState(0);
@@ -131,10 +133,26 @@ const Settings = () => {
           <>
             <Section title="Appearance" description="Theme and density settings.">
               <Stack spacing={2}>
-                <FormControlLabel control={<Switch checked={!!me?.preferences?.appearance?.darkMode} onChange={(e) => savePreferences({ appearance: { darkMode: e.target.checked }})} />} label="Enable dark mode" />
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={isDarkMode}
+                      onChange={e => setThemeMode(e.target.checked ? 'dark' : 'light')}
+                    />
+                  }
+                  label="Enable dark mode"
+                />
                 <FormControl fullWidth>
                   <InputLabel id="density">Density</InputLabel>
-                  <Select labelId="density" label="Density" value={me?.preferences?.appearance?.density || 'comfortable'} onChange={(e) => savePreferences({ appearance: { density: e.target.value }})}>
+                  <Select
+                    labelId="density"
+                    label="Density"
+                    value={density}
+                    onChange={e => {
+                      setDensity(e.target.value);
+                      savePreferences({ appearance: { density: e.target.value } });
+                    }}
+                  >
                     <MenuItem value={'comfortable'}>Comfortable</MenuItem>
                     <MenuItem value={'compact'}>Compact</MenuItem>
                   </Select>
