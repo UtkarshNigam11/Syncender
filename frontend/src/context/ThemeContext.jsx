@@ -1,7 +1,17 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { createTheme } from '@mui/material/styles';
 
-const ThemeContext = createContext();
+// Provide a safe default context to avoid runtime crashes showing a white screen
+const defaultTheme = createTheme();
+const ThemeContext = createContext({
+  isDarkMode: false,
+  themeMode: 'light',
+  setThemeMode: () => {},
+  toggleDarkMode: () => {},
+  accent: 'blue',
+  setAccent: () => {},
+  theme: defaultTheme,
+});
 
 export const useTheme = () => {
   const context = useContext(ThemeContext);
@@ -11,18 +21,34 @@ export const useTheme = () => {
   return context;
 };
 
+// Normalize external strings into supported modes
+function normalizeMode(mode) {
+  const m = String(mode || '').toLowerCase();
+  if (m === 'day' || m === 'light') return 'light';
+  if (m === 'dark') return 'dark';
+  if (m === 'system') return 'system';
+  return 'light'; // safe default
+}
+
 export const CustomThemeProvider = ({ children }) => {
-  // Theme mode: 'system' | 'light' | 'dark'
-  const [themeMode, setThemeMode] = useState(() => localStorage.getItem('themeMode') || 'system');
+  // Theme mode: 'system' | 'light' | 'dark' (accept 'day' as alias of 'light')
+  const [themeMode, _setThemeMode] = useState(() => normalizeMode(localStorage.getItem('themeMode') || 'system'));
   // Accent color: choose from palette keys
   const [accent, setAccent] = useState(() => localStorage.getItem('accentColor') || 'blue');
 
+  // Persist normalized theme mode
   useEffect(() => { localStorage.setItem('themeMode', themeMode); }, [themeMode]);
   useEffect(() => { localStorage.setItem('accentColor', accent); }, [accent]);
 
   // Resolve system preference
   const prefersDark = useMemo(() => window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches, []);
   const isDark = themeMode === 'dark' || (themeMode === 'system' && prefersDark);
+
+  // Safe setter that normalizes inputs like 'day' => 'light'
+  const setThemeMode = (mode) => _setThemeMode(prev => normalizeMode(typeof mode === 'function' ? mode(prev) : mode));
+
+  // Provide a simple toggle used by Navbar
+  const toggleDarkMode = () => setThemeMode(isDark ? 'light' : 'dark');
 
   const primaryMap = {
     blue: { main: '#1976d2', light: '#42a5f5', dark: '#1565c0' },
@@ -33,38 +59,41 @@ export const CustomThemeProvider = ({ children }) => {
   };
   const primary = primaryMap[accent] || primaryMap.blue;
 
-  const baseTheme = useMemo(() => createTheme({
-    palette: {
+  const baseTheme = useMemo(() => {
+    const palette = {
       mode: isDark ? 'dark' : 'light',
       primary,
       secondary: { main: isDark ? '#FF7043' : '#FF5722' },
-      background: isDark ? {
-        default: '#121212',
-        paper: '#1e1e1e',
-      } : {
-        default: '#f5f5f5',
-        paper: '#ffffff',
-      },
-      text: isDark ? {
-        primary: '#ffffff',
-        secondary: '#b0b0b0',
-      } : undefined,
-    },
-    components: {
+      background: isDark
+        ? { default: '#121212', paper: '#1e1e1e' }
+        : { default: '#f5f5f5', paper: '#ffffff' },
+    };
+    if (isDark) {
+      palette.text = { primary: '#ffffff', secondary: '#b0b0b0' };
+    }
+
+    const components = {
       MuiAppBar: { styleOverrides: { root: { background: undefined } } },
-      MuiCard: isDark ? { styleOverrides: { root: { backgroundColor: '#2a2a2a', borderColor: '#404040' } } } : undefined,
       MuiChip: {
-        styleOverrides: { root: { '&.MuiChip-colorError': { backgroundColor: '#d32f2f', color: '#ffffff' } } }
+        styleOverrides: {
+          root: { '&.MuiChip-colorError': { backgroundColor: '#d32f2f', color: '#ffffff' } },
+        },
       },
       MuiButton: { defaultProps: { disableElevation: true } },
-    },
-  }), [isDark, accent]);
+    };
+    if (isDark) {
+      components.MuiCard = { styleOverrides: { root: { backgroundColor: '#2a2a2a', borderColor: '#404040' } } };
+    }
+
+    return createTheme({ palette, components });
+  }, [isDark, accent]);
 
   return (
     <ThemeContext.Provider value={{
       isDarkMode: isDark,
       themeMode,
       setThemeMode,
+      toggleDarkMode,
       accent,
       setAccent,
       theme: baseTheme,
