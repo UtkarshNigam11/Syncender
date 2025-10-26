@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+﻿import React, { useState, useContext } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -78,7 +78,11 @@ const Navbar = () => {
   const navigate = useNavigate();
 
   const handleProfileMenuOpen = (event) => {
-    setAnchorEl(event.currentTarget);
+    if (!user) {
+      navigate('/login');
+    } else {
+      setAnchorEl(event.currentTarget);
+    }
   };
 
   const handleNotificationMenuOpen = (event) => {
@@ -145,7 +149,6 @@ const Navbar = () => {
           />
         </Box>
 
-        {/* Make search grow and have a reasonable max width */}
         <Box sx={{ flex: 1, maxWidth: { xs: '100%', sm: 420, md: 560 }, mx: 2 }}>
           <Search>
             <SearchIconWrapper>
@@ -212,26 +215,27 @@ const Navbar = () => {
           </IconButton>
         </Box>
 
-        <Menu
-          id="primary-search-account-menu"
-          anchorEl={anchorEl}
-          anchorOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
-          }}
-          keepMounted
-          transformOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
-          }}
-          open={Boolean(anchorEl)}
-          onClose={handleMenuClose}
-        >
-          <MenuItem onClick={() => goTo('/profile')}>Profile</MenuItem>
-          <MenuItem onClick={() => goTo('/calendar')}>My Calendar</MenuItem>
-          <MenuItem onClick={() => goTo('/settings')}>Settings</MenuItem>
-          <MenuItem onClick={handleLogout}>Logout</MenuItem>
-        </Menu>
+        {user && (
+          <Menu
+            id="primary-search-account-menu"
+            anchorEl={anchorEl}
+            anchorOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+            keepMounted
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right',
+            }}
+            open={Boolean(anchorEl)}
+            onClose={handleMenuClose}
+          >
+            <MenuItem onClick={() => goTo('/profile')}>Profile</MenuItem>
+            <MenuItem onClick={() => goTo('/calendar')}>My Calendar</MenuItem>
+            <MenuItem onClick={handleLogout}>Logout</MenuItem>
+          </Menu>
+        )}
 
         <Menu
           id="notification-menu"
@@ -248,9 +252,9 @@ const Navbar = () => {
           open={Boolean(notificationAnchorEl)}
           onClose={handleMenuClose}
         >
-          <MenuItem onClick={handleMenuClose}>🏀 Lakers vs Warriors - Tonight 8PM</MenuItem>
-          <MenuItem onClick={handleMenuClose}>🏈 NFL Game Alert - Tomorrow</MenuItem>
-          <MenuItem onClick={handleMenuClose}>🏏 India vs Australia - Live Now</MenuItem>
+          <MenuItem onClick={handleMenuClose}> Lakers vs Warriors - Tonight 8PM</MenuItem>
+          <MenuItem onClick={handleMenuClose}> NFL Game Alert - Tomorrow</MenuItem>
+          <MenuItem onClick={handleMenuClose}> India vs Australia - Live Now</MenuItem>
         </Menu>
       </Toolbar>
     </AppBar>

@@ -69,8 +69,8 @@ export const CustomThemeProvider = ({ children }) => {
         dark: '#D84315',
       },
       background: {
-        default: '#121212',
-        paper: '#1e1e1e',
+        default: '#1a1a1a',
+        paper: '#242424',
       },
       text: {
         primary: '#ffffff',
@@ -89,8 +89,8 @@ export const CustomThemeProvider = ({ children }) => {
       MuiCard: {
         styleOverrides: {
           root: {
-            backgroundColor: '#2a2a2a',
-            borderColor: '#404040',
+            backgroundColor: '#2d2d2d',
+            borderColor: '#3a3a3a',
           },
         },
       },
