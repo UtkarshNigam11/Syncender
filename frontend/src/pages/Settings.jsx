@@ -388,8 +388,8 @@ const Settings = () => {
                         </Box>
 
                         <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                          <Typography sx={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#6B7280', fontWeight: 500, mb: 0.5 }}>Linked Account</Typography>
-                          <Typography sx={{ fontSize: 14, color: '#111827', fontWeight: 600, fontFamily: 'monospace' }} title={email}>{maskEmail(email)}</Typography>
+                          <Typography sx={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'text.secondary', fontWeight: 500, mb: 0.5 }}>Linked Account</Typography>
+                          <Typography sx={{ fontSize: 14, color: 'text.primary', fontWeight: 600, fontFamily: 'monospace' }} title={email}>{maskEmail(email)}</Typography>
                           
                         </Box>
                       </Box>
