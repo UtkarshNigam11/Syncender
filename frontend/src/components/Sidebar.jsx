@@ -21,6 +21,7 @@ import {
   TrendingUp as TrendingIcon,
   Favorite as FavoriteIcon,
   Settings as SettingsIcon,
+  Groups as TeamsIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 280;
@@ -49,6 +50,12 @@ const menuItems = [
     icon: <CalendarIcon />,
     path: '/calendar',
     color: '#9C27B0',
+  },
+  {
+    text: 'Favorite Teams',
+    icon: <TeamsIcon />,
+    path: '/teams',
+    color: '#FF6B9D',
   },
 ];
 

@@ -47,6 +47,10 @@ const eventSchema = new mongoose.Schema({
     enum: ['api', 'manual', 'google', 'apple'],
     required: true
   },
+  autoSynced: {
+    type: Boolean,
+    default: false
+  },
   externalIds: {
     googleCalendar: String,
     appleCalendar: String,

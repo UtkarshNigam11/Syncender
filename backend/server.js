@@ -4,6 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
+const cronService = require('./services/cronService');
 
 // Load environment variables
 dotenv.config();
@@ -47,4 +48,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
+  
+  // Initialize cron jobs after server starts
+  cronService.initializeCronJobs();
 });
