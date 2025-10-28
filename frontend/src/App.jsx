@@ -11,7 +11,7 @@ import { AuthProvider, AuthContext } from './context/AuthContext';
 // Pages
 import Dashboard from './pages/Dashboard';
 import Sports from './pages/Sports';
-import Teams from './pages/Teams';
+import FavoriteTeams from './pages/FavoriteTeams';
 import Matches from './pages/Matches';
 import Calendar from './pages/Calendar';
 import TestCricketMatch from './pages/TestCricketMatch';
@@ -74,7 +74,7 @@ function AppLayout() {
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/sports" element={<Sports />} />
-            <Route path="/teams/:sportId" element={<Teams />} />
+            <Route path="/teams" element={<FavoriteTeams />} />
             <Route path="/matches" element={<Matches />} />
             <Route path="/matches/:teamId" element={<Matches />} />
             <Route path="/calendar" element={<Calendar />} />

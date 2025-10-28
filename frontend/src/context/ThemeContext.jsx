@@ -35,8 +35,8 @@ export const CustomThemeProvider = ({ children }) => {
   const [themeMode, _setThemeMode] = useState(() => normalizeMode(localStorage.getItem('themeMode') || 'system'));
   // Accent color: choose from palette keys
   const [accent, setAccent] = useState(() => localStorage.getItem('accentColor') || 'blue');
-  // Density: 'comfortable' | 'compact'
-  const [density, setDensity] = useState(() => localStorage.getItem('density') || 'comfortable');
+  // Density: 'comfortable' | 'compact' (default to compact to reduce overall sizes)
+  const [density, setDensity] = useState(() => localStorage.getItem('density') || 'compact');
 
   // Persist normalized theme mode
   useEffect(() => { localStorage.setItem('themeMode', themeMode); }, [themeMode]);
@@ -94,7 +94,12 @@ export const CustomThemeProvider = ({ children }) => {
       components.MuiCard = { styleOverrides: { root: { backgroundColor: '#2a2a2a', borderColor: '#404040' } } };
     }
 
-    return createTheme({ palette, components, spacing });
+    // Slightly reduce overall typography scale for a less "zoomed" look
+    const typography = {
+      fontSize: 13, // default is 14 — reduce globally
+    };
+
+    return createTheme({ palette, components, spacing, typography });
   }, [isDark, accent, density]);
 
   return (

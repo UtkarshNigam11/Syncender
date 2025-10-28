@@ -188,7 +188,8 @@ exports.getTeams = async (sport, options = {}) => {
   try {
     // Handle SportsDB sports (cricket, tennis, etc.)
     if (SPORTSDB_SPORTS.includes(sport)) {
-      return await getTeamsFromSportsDB(sport);
+      const { league } = options;
+      return await getTeamsFromSportsDB(sport, league);
     }
     
     // Handle ESPN sports
@@ -504,29 +505,45 @@ async function getCricketScoresFromSportsDB(sport) {
 /**
  * Helper function to get teams from SportsDB for cricket/tennis
  * @param {string} sport - Sport type
+ * @param {string} league - Optional league ID
  * @returns {Object} - Teams data
  */
-async function getTeamsFromSportsDB(sport) {
+async function getTeamsFromSportsDB(sport, league) {
   try {
-    // For cricket, get IPL teams as an example
+    // For cricket, get teams from specific league if provided
     const leagueMap = {
-      cricket: '4344', // IPL league ID
+      cricket: '4344', // IPL league ID (default)
       tennis: '4366', // ATP tour
       rugby: '4393', // Rugby World Cup
       formula1: '4370' // Formula 1
     };
     
-    const leagueId = leagueMap[sport] || '4344';
+    const leagueId = league || leagueMap[sport] || '4344';
     
     const response = await axios.get(
       `${SPORTS_DB_API}/${SPORTS_DB_KEY}/lookup_all_teams.php?id=${leagueId}`
     );
     
+    const rawTeams = response.data.teams || [];
+    const teams = rawTeams.map(t => ({
+      id: t.idTeam,
+      name: t.strTeam,
+      shortName: t.strTeamShort || t.strTeam,
+      logo: t.strTeamBadge || t.strTeamLogo || '',
+      strTeamBadge: t.strTeamBadge,
+      strStadium: t.strStadium,
+      strCountry: t.strCountry,
+      strLeague: t.strLeague,
+      idTeam: t.idTeam,
+      strTeam: t.strTeam,
+    }));
+    
     return {
       success: true,
-      data: response.data.teams || [],
+      data: teams,
       sport: sport.toUpperCase(),
-      provider: 'SportsDB'
+      provider: 'SportsDB',
+      leagueId
     };
   } catch (error) {
     console.error(`Error fetching ${sport} teams:`, error.message);

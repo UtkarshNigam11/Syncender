@@ -42,11 +42,13 @@ exports.getTeams = async (req, res) => {
   try {
     const { sport } = req.params;
     const { league } = req.query;
-    // For soccer, allow league query; otherwise default behavior
-    if (sport === 'soccer') {
+    
+    // For soccer and cricket, allow league query
+    if (sport === 'soccer' || sport === 'cricket') {
       const teams = await sportsApiService.getTeams(sport, { league });
       return res.json(teams);
     }
+    
     const teams = await sportsApiService.getTeams(sport);
     res.json(teams);
   } catch (error) {
