@@ -28,6 +28,7 @@ import {
   Add,
   MoreVert,
   EventAvailable,
+  Groups,
 } from '@mui/icons-material';
 
 const Dashboard = () => {
@@ -278,7 +279,7 @@ const Dashboard = () => {
       ) : (
         <>
           {/* Stats Cards */}
-          <Grid container spacing={3} sx={{ mb: 4 }}>
+          <Grid container spacing={3} sx={{ mb: 4 }} columns={{ xs: 12, sm: 12, md: 15 }}>
             {/* Ongoing Matches Card */}
             <Grid item xs={12} sm={6} md={3}>
               <Card
@@ -535,20 +536,78 @@ const Dashboard = () => {
                     </Box>
                   </Box>
                   <Typography variant="h2" sx={{ fontWeight: 800, mb: 0.5, fontSize: '2.5rem', textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
-                    {upcomingGames.length}
+                    24
                   </Typography>
                   <Typography variant="body2" sx={{ opacity: 0.95, fontWeight: 500, fontSize: '0.875rem' }}>
-                    Calendar Events
+                    Events Synced
                   </Typography>
                   <Typography variant="caption" sx={{ opacity: 0.8, mt: 0.5, display: 'block', fontSize: '0.7rem' }}>
-                    View your calendar
+                    View calendar
                   </Typography>
                 </CardContent>
               </Card>
             </Grid>
-          </Grid>
 
-      <Grid container spacing={3}>
+            {/* Favorite Teams Card */}
+            <Grid item xs={12} sm={6} md={3}>
+              <Card
+                onClick={() => navigate('/teams')}
+                sx={{
+                  background: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
+                  color: 'white',
+                  height: '180px',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  borderRadius: 4,
+                  '&:hover': {
+                    transform: 'translateY(-8px)',
+                    boxShadow: '0 12px 40px rgba(106, 17, 203, 0.4)',
+                  },
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    right: 0,
+                    width: '200px',
+                    height: '200px',
+                    background: 'radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%)',
+                    borderRadius: '50%',
+                    transform: 'translate(50%, -50%)',
+                  },
+                }}
+              >
+                <CardContent sx={{ position: 'relative', zIndex: 1, p: 2.5, '&:last-child': { pb: 2.5 } }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+                    <Box
+                      sx={{
+                        bgcolor: 'rgba(255, 255, 255, 0.2)',
+                        borderRadius: 2,
+                        p: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Groups sx={{ fontSize: 28 }} />
+                    </Box>
+                  </Box>
+                  <Typography variant="h2" sx={{ fontWeight: 800, mb: 0.5, fontSize: '2.5rem', textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+                    ⭐
+                  </Typography>
+                  <Typography variant="body2" sx={{ opacity: 0.95, fontWeight: 500, fontSize: '0.875rem' }}>
+                    Favorite Teams
+                  </Typography>
+                  <Typography variant="caption" sx={{ opacity: 0.8, mt: 0.5, display: 'block', fontSize: '0.7rem' }}>
+                    Auto-sync matches
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            </Grid>
+
+        <Grid container spacing={3}>
         {/* Ongoing Matches */}
         <Grid item xs={12} lg={6} id="ongoing-matches-section">
           <Card sx={{ height: '100%' }}>

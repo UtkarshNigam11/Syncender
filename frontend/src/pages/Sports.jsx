@@ -111,7 +111,8 @@ const Sports = () => {
   };
 
   const handleViewMatches = (sportId) => {
-    navigate(`/teams/${sportId}`);
+    // Redirect to Favorite Teams page where users can select sport -> league -> team
+    navigate('/teams');
   };
 
   if (loading) {
