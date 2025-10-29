@@ -21,6 +21,18 @@ const userSchema = new mongoose.Schema({
     required: [true, 'Name is required'],
     trim: true
   },
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
+  },
+  isActive: {
+    type: Boolean,
+    default: true
+  },
+  lastLogin: {
+    type: Date
+  },
   // Subscription/plan information
   plan: {
     type: String,
@@ -45,6 +57,13 @@ const userSchema = new mongoose.Schema({
     refreshToken: String,
     expiryDate: Date
   },
+  // Favorite teams for auto-sync
+  favoriteTeams: [{
+    sport: String,
+    league: String,
+    teamId: String,
+    name: String,
+  }],
   preferences: {
     favoriteTeams: { type: [String], default: [] },
     favoriteSports: { type: [String], default: [] },
