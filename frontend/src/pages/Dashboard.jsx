@@ -37,6 +37,7 @@ const Dashboard = () => {
   const [upcomingGames, setUpcomingGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [userStats, setUserStats] = useState({ favoriteTeams: 0, planLimit: 2 });
   const hasFetchedData = useRef(false);
 
   // Function to add match to calendar
@@ -93,6 +94,31 @@ const Dashboard = () => {
     localStorage.removeItem('dashboard_liveGames');
     localStorage.removeItem('dashboard_upcomingGames');
     sessionStorage.removeItem('dashboard_spa_nav');
+    
+    // Fetch user stats for favorite teams
+    const fetchUserStats = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          const [userRes, subRes] = await Promise.all([
+            axios.get('http://localhost:5000/api/users/me', {
+              headers: { Authorization: `Bearer ${token}` }
+            }),
+            axios.get('http://localhost:5000/api/subscription', {
+              headers: { Authorization: `Bearer ${token}` }
+            })
+          ]);
+          
+          const favoriteTeamsCount = userRes.data?.preferences?.favoriteTeams?.length || 0;
+          const planLimit = subRes.data?.limits?.favoriteTeams || 2;
+          setUserStats({ favoriteTeams: favoriteTeamsCount, planLimit });
+        }
+      } catch (err) {
+        console.error('Error fetching user stats:', err);
+      }
+    };
+    
+    fetchUserStats();
     
     // Fetch fresh data
     const fetchSportsData = async () => {
@@ -594,7 +620,7 @@ const Dashboard = () => {
                     </Box>
                   </Box>
                   <Typography variant="h2" sx={{ fontWeight: 800, mb: 0.5, fontSize: '2.5rem', textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
-                    ⭐
+                    {userStats.favoriteTeams}/{userStats.planLimit}
                   </Typography>
                   <Typography variant="body2" sx={{ opacity: 0.95, fontWeight: 500, fontSize: '0.875rem' }}>
                     Favorite Teams

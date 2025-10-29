@@ -20,6 +20,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
+import Subscription from './pages/Subscription';
 
 // Admin Pages
 import AdminLogin from './pages/admin/AdminLogin';
@@ -125,6 +126,7 @@ function AppLayout() {
             <Route path="/matches/:teamId" element={<Matches />} />
             <Route path="/calendar" element={<Calendar />} />
             <Route path="/test-cricket" element={<TestCricketMatch />} />
+            <Route path="/subscription" element={<PrivateRoute><Subscription /></PrivateRoute>} />
             <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
             <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
             <Route path="/" element={<Navigate to="/dashboard" />} />

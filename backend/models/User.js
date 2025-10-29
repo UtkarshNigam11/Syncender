@@ -66,6 +66,7 @@ const userSchema = new mongoose.Schema({
   }],
   preferences: {
     favoriteTeams: { type: [String], default: [] },
+    favoriteLeagues: { type: [String], default: [] },
     favoriteSports: { type: [String], default: [] },
     timezone: {
       type: String,
