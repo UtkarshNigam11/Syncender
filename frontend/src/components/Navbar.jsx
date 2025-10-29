@@ -1,4 +1,4 @@
-﻿import React, { useState, useContext } from 'react';
+﻿import React, { useState, useContext, useEffect } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -13,6 +13,8 @@ import {
   InputBase,
   alpha,
   Tooltip,
+  Slide,
+  useScrollTrigger,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -73,9 +75,29 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 const Navbar = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
+  const [prevScrollPos, setPrevScrollPos] = useState(0);
+  const [visible, setVisible] = useState(true);
   const { isDarkMode, toggleDarkMode } = useTheme();
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, userPlan } = useContext(AuthContext);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollPos = window.scrollY;
+      
+      // Show navbar when scrolling up, hide when scrolling down
+      if (currentScrollPos < prevScrollPos || currentScrollPos < 10) {
+        setVisible(true);
+      } else if (currentScrollPos > prevScrollPos && currentScrollPos > 100) {
+        setVisible(false);
+      }
+      
+      setPrevScrollPos(currentScrollPos);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [prevScrollPos]);
 
   const handleProfileMenuOpen = (event) => {
     if (!user) {
@@ -116,50 +138,45 @@ const Navbar = () => {
   const avatarText = getInitials(user?.name || user?.email);
 
   return (
-    <AppBar
-      position="static"
-      color="default"
-      elevation={0}
-      sx={{
-        borderBottom: '1px solid',
-        borderColor: 'divider',
-      }}
-    >
-      <Toolbar>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
-          <CalendarToday sx={{ color: 'primary.main', flexShrink: 0 }} />
-          <Typography
-            variant="h6"
-            noWrap
+    <Slide appear={false} direction="down" in={visible}>
+      <AppBar
+        position="sticky"
+        color="default"
+        elevation={0}
+        sx={{
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          top: 0,
+          transition: 'transform 0.3s ease-in-out',
+        }}
+      >
+        <Toolbar>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
+            <CalendarToday sx={{ color: 'primary.main', flexShrink: 0 }} />
+            <Typography
+              variant="h6"
+              noWrap
             sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1, maxWidth: { xs: 140, sm: 220, md: 280 } }}
             title="SportsCalendar"
           >
             SportsCalendar
           </Typography>
-          <Chip
-            label="Pro"
-            size="small"
-            sx={{
-              backgroundColor: 'secondary.main',
-              color: 'common.white',
-              height: 20,
-              fontSize: '0.7rem',
-              fontWeight: 600,
-            }}
-          />
+          {userPlan === 'pro' && (
+            <Chip
+              label="Pro"
+              size="small"
+              sx={{
+                backgroundColor: 'secondary.main',
+                color: 'common.white',
+                height: 20,
+                fontSize: '0.7rem',
+                fontWeight: 600,
+              }}
+            />
+          )}
         </Box>
 
-        <Box sx={{ flex: 1, maxWidth: { xs: '100%', sm: 420, md: 560 }, mx: 2 }}>
-          <Search>
-            <SearchIconWrapper>
-              <SearchIcon />
-            </SearchIconWrapper>
-            <StyledInputBase
-              placeholder="Search teams, players, matches..."
-              inputProps={{ 'aria-label': 'search' }}
-            />
-          </Search>
-        </Box>
+        {/* Search bar removed as per user request */}
 
         <Box sx={{ flexGrow: 1 }} />
 
@@ -258,6 +275,7 @@ const Navbar = () => {
         </Menu>
       </Toolbar>
     </AppBar>
+    </Slide>
   );
 };
 

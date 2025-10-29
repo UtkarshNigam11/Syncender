@@ -8,6 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
+  const [userPlan, setUserPlan] = useState(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -20,6 +21,8 @@ export const AuthProvider = ({ children }) => {
             logout();
           } else {
             setUser(decoded);
+            // Fetch user's subscription plan
+            fetchUserPlan();
           }
         } catch (error) {
           console.error('Auth error:', error);
@@ -31,6 +34,17 @@ export const AuthProvider = ({ children }) => {
 
     checkAuth();
   }, [token]);
+
+  const fetchUserPlan = async () => {
+    try {
+      const res = await axios.get('/api/subscription');
+      if (res.data?.plan) {
+        setUserPlan(res.data.plan);
+      }
+    } catch (error) {
+      console.error('Failed to fetch subscription:', error);
+    }
+  };
 
   const setAuthToken = (jwt) => {
     localStorage.setItem('token', jwt);
@@ -94,6 +108,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
+    setUserPlan(null);
     delete axios.defaults.headers.common['Authorization'];
   };
 
@@ -129,6 +144,7 @@ export const AuthProvider = ({ children }) => {
       loginWithToken,
       updateUser,
       getSubscription,
+      userPlan,
     }}>
       {children}
     </AuthContext.Provider>

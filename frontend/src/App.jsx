@@ -113,11 +113,11 @@ function AppLayout() {
 
   // Render with navbar/sidebar for authenticated routes
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', width: '100%', maxWidth: '1600px', margin: '0 auto' }}>
       <Sidebar />
-      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <Navbar />
-        <Box component="main" sx={{ flexGrow: 1, p: 3, backgroundColor: 'background.default' }}>
+        <Box component="main" sx={{ flexGrow: 1, p: 2, backgroundColor: 'background.default' }}>
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/sports" element={<Sports />} />
