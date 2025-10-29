@@ -254,6 +254,20 @@ router.put('/users/:id', adminProtect, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Prevent deactivating admin accounts
+    if (user.role === 'admin' && typeof isActive === 'boolean' && !isActive) {
+      return res.status(403).json({ 
+        message: 'Cannot deactivate admin accounts. Admin accounts must remain active.' 
+      });
+    }
+
+    // Prevent changing admin role
+    if (user.role === 'admin' && req.body.role && req.body.role !== 'admin') {
+      return res.status(403).json({ 
+        message: 'Cannot change admin role.' 
+      });
+    }
+
     // Update fields if provided
     if (name) user.name = name;
     if (email) user.email = email;
@@ -281,6 +295,13 @@ router.delete('/users/:id', adminProtect, async (req, res) => {
     
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Prevent deleting admin accounts
+    if (user.role === 'admin') {
+      return res.status(403).json({ 
+        message: 'Cannot delete admin accounts.' 
+      });
     }
 
     // Delete user's events
