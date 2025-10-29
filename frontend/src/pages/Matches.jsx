@@ -307,20 +307,12 @@ const Matches = () => {
       console.log('Calendar type:', calendarType);
       
       if (!token) {
-        // For demo purposes, let's create a mock event locally
-        const confirmed = confirm('You are not logged in. Would you like to:\n\n1. Click "OK" to go to Login page\n2. Click "Cancel" to download calendar file anyway (demo mode)');
-        
-        if (confirmed) {
+        // Redirect to login for Google Calendar, or allow Apple Calendar download
+        if (calendarType === 'google') {
           navigate('/login');
           return;
-        } else {
-          // Demo mode - just download the ICS file for Apple Calendar
-          if (calendarType === 'google') {
-            alert('Google Calendar requires login. Switching to Apple Calendar download...');
-            calendarType = 'apple';
-          }
-          // Continue to Apple Calendar download without authentication
         }
+        // For Apple Calendar, continue to download without authentication
       }
 
       if (calendarType === 'apple') {
@@ -390,12 +382,10 @@ const Matches = () => {
           document.body.removeChild(link);
           window.URL.revokeObjectURL(url);
         }
-        
-        alert('Calendar file downloaded! Open it to add to Apple Calendar.');
       } else {
         // For Google Calendar
         if (!token) {
-          alert('Google Calendar requires authentication. Please login first or use Apple Calendar option.');
+          navigate('/login');
           return;
         }
         
@@ -407,24 +397,17 @@ const Matches = () => {
         });
         
         console.log('Google Calendar response:', response.data);
-        alert('Match added to your Google Calendar!');
       }
     } catch (error) {
       console.error('Error adding to calendar:', error);
       console.error('Error response:', error.response?.data);
       console.error('Error status:', error.response?.status);
       if (error.response && error.response.status === 401) {
-        alert('Your session has expired or you are not authorized. Please log in again.');
         navigate('/login');
       } else if (error.response && error.response.data.message) {
         if (error.response.data.message.includes('Google Calendar not connected')) {
-          alert('Please connect your Google account from your profile to add events to Google Calendar.');
           navigate('/profile');
-        } else {
-          alert(`Error: ${error.response.data.message}`);
         }
-      } else {
-        alert(`Failed to add match to ${calendarType} calendar. Please try again.`);
       }
     } finally {
       setIsAddingToCalendar(false);
