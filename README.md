@@ -329,10 +329,15 @@ Required environment variables:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👨‍💻 Author
+## 👨‍💻 Co-Authors
 
 **Utkarsh Nigam**
 - GitHub: [@UtkarshNigam11](https://github.com/UtkarshNigam11)
+
+**Devansh Singh**
+-GitHub : [@devansh7-7](https://github.com/devansh7-7)
+
+
 - Project: [Syncender](https://github.com/UtkarshNigam11/Syncender)
 
 ## 🙏 Acknowledgments
