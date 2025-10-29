@@ -38,10 +38,14 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [userStats, setUserStats] = useState({ favoriteTeams: 0, planLimit: 2 });
+  const [calendarStatus, setCalendarStatus] = useState({}); // Track calendar add status for each game
   const hasFetchedData = useRef(false);
 
   // Function to add match to calendar
   const addToCalendar = async (game) => {
+    const gameId = `${game.awayTeam}-${game.homeTeam}-${game.date}`;
+    setCalendarStatus(prev => ({ ...prev, [gameId]: 'loading' }));
+    
     try {
       const startTime = new Date(game.date);
       const endTime = new Date(startTime.getTime() + 3 * 60 * 60 * 1000); // 3 hours later
@@ -59,9 +63,9 @@ const Dashboard = () => {
         }
       };
 
-      const token = localStorage.getItem('token'); // Assuming token is stored in localStorage
+      const token = localStorage.getItem('token');
       if (!token) {
-          alert('Please login to add events to your calendar.');
+          setCalendarStatus(prev => ({ ...prev, [gameId]: 'failed' }));
           navigate('/login');
           return;
       }
@@ -72,18 +76,15 @@ const Dashboard = () => {
         }
       });
       
-      alert('Match added to your Google Calendar!');
+      setCalendarStatus(prev => ({ ...prev, [gameId]: 'added' }));
     } catch (error) {
       console.error('Error adding to calendar:', error);
+      setCalendarStatus(prev => ({ ...prev, [gameId]: 'failed' }));
+      
       if (error.response && error.response.status === 401) {
-        alert('Your session has expired or you are not authorized. Please log in again.');
         navigate('/login');
       } else if (error.response && error.response.data.message && error.response.data.message.includes('Google')) {
-        alert('Please connect your Google account from your profile to add events to Google Calendar.');
         navigate('/profile');
-      }
-      else {
-        alert('Failed to add match to calendar.');
       }
     }
   };
@@ -866,14 +867,47 @@ const Dashboard = () => {
                             {game.venue || 'Venue TBD'}
                           </Typography>
                         </Box>
-                        <Button 
-                          size="small" 
-                          variant="outlined"
-                          startIcon={<EventAvailable />}
-                          onClick={() => addToCalendar(game)}
-                        >
-                          Add to Calendar
-                        </Button>
+                        {(() => {
+                          const gameId = `${game.awayTeam}-${game.homeTeam}-${game.date}`;
+                          const status = calendarStatus[gameId];
+                          
+                          if (status === 'added') {
+                            return (
+                              <Chip 
+                                label="Added" 
+                                color="success" 
+                                size="small"
+                                icon={<EventAvailable />}
+                              />
+                            );
+                          } else if (status === 'failed') {
+                            return (
+                              <Chip 
+                                label="Failed to add" 
+                                color="error" 
+                                size="small"
+                              />
+                            );
+                          } else if (status === 'loading') {
+                            return (
+                              <Chip 
+                                label="Adding..." 
+                                size="small"
+                              />
+                            );
+                          } else {
+                            return (
+                              <Button 
+                                size="small" 
+                                variant="outlined"
+                                startIcon={<EventAvailable />}
+                                onClick={() => addToCalendar(game)}
+                              >
+                                Add to Calendar
+                              </Button>
+                            );
+                          }
+                        })()}
                       </Box>
                     </Card>
                   ))}

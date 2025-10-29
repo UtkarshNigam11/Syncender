@@ -143,10 +143,6 @@ function Subscription() {
   };
 
   const handleCancelSubscription = async () => {
-    if (!window.confirm('Are you sure you want to cancel your subscription?')) {
-      return;
-    }
-
     try {
       setProcessing(true);
       setError('');
