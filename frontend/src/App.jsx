@@ -7,6 +7,7 @@ import { Box } from '@mui/material';
 // Context
 import { CustomThemeProvider, useTheme } from './context/ThemeContext';
 import { AuthProvider, AuthContext } from './context/AuthContext';
+import { AdminAuthProvider } from './context/AdminAuthContext';
 
 // Pages
 import Dashboard from './pages/Dashboard';
@@ -20,10 +21,23 @@ import Register from './pages/Register';
 import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 
+// Admin Pages
+import AdminLogin from './pages/admin/AdminLogin';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminAnalytics from './pages/admin/AdminAnalytics';
+import AdminEvents from './pages/admin/AdminEvents';
+import AdminSportsManagement from './pages/admin/AdminSportsManagement';
+import AdminMonitoring from './pages/admin/AdminMonitoring';
+import AdminLogs from './pages/admin/AdminLogs';
+import AdminSettings from './pages/admin/AdminSettings';
+
 // Components
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
+import AdminLayout from './components/admin/AdminLayout';
 import PrivateRoute from './components/PrivateRoute';
+import AdminPrivateRoute from './components/admin/AdminPrivateRoute';
 
 function OAuthHandler() {
   const navigate = useNavigate();
@@ -52,6 +66,38 @@ function AppLayout() {
   // Routes that should NOT show navbar/sidebar (public routes)
   const publicRoutes = ['/login', '/register', '/auth/google/callback'];
   const isPublicRoute = publicRoutes.includes(location.pathname);
+
+  // Admin routes
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
+  // Admin panel routes (with admin sidebar)
+  if (isAdminRoute) {
+    return (
+      <AdminAuthProvider>
+        <Routes>
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route
+            path="/admin"
+            element={
+              <AdminPrivateRoute>
+                <AdminLayout />
+              </AdminPrivateRoute>
+            }
+          >
+            <Route index element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="analytics" element={<AdminAnalytics />} />
+            <Route path="events" element={<AdminEvents />} />
+            <Route path="sports" element={<AdminSportsManagement />} />
+            <Route path="monitoring" element={<AdminMonitoring />} />
+            <Route path="logs" element={<AdminLogs />} />
+            <Route path="settings" element={<AdminSettings />} />
+          </Route>
+        </Routes>
+      </AdminAuthProvider>
+    );
+  }
 
   if (isPublicRoute) {
     // Render only the page content without navbar/sidebar
