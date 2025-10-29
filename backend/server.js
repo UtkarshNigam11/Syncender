@@ -40,6 +40,7 @@ app.use('/api/sports', require('./routes/sportsRoutes'));
 app.use('/api/apple', require('./routes/appleRoutes'));
 app.use('/api/subscription', require('./routes/subscriptionRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/payment', require('./routes/paymentRoutes'));
 
 // Error handling middleware
 const errorHandler = require('./middleware/errorHandler');

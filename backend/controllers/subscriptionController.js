@@ -44,8 +44,8 @@ exports.upgradePlan = async (req, res) => {
 };
 
 function getPlanLimits(plan) {
-  if (plan === 'pro') return { favoriteTeams: 10 };
-  return { favoriteTeams: 2 };
+  if (plan === 'pro') return { favoriteTeams: 7, favoriteLeagues: 1 };
+  return { favoriteTeams: 2, favoriteLeagues: 0 };
 }
 
 exports.getPlanLimits = getPlanLimits;

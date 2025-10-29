@@ -22,6 +22,7 @@ import {
   Favorite as FavoriteIcon,
   Settings as SettingsIcon,
   Groups as TeamsIcon,
+  WorkspacePremium as PremiumIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 280;
@@ -60,6 +61,12 @@ const menuItems = [
 ];
 
 const secondaryItems = [
+  {
+    text: 'Subscription',
+    icon: <PremiumIcon />,
+    path: '/subscription',
+    color: '#FFD700',
+  },
   {
     text: 'Trending',
     icon: <TrendingIcon />,

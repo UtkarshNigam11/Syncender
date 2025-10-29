@@ -41,7 +41,7 @@ const FavoriteTeams = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
   const [searchTerm, setSearchTerm] = useState('');
 
-  const maxFavorites = subscription?.plan === 'pro' ? 10 : 2;
+  const maxFavorites = subscription?.plan === 'pro' ? 7 : 2;
 
   // Sports with their leagues
   const sportsConfig = [
