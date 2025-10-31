@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import axios from 'axios';
 import {
   Container,
   Typography,
@@ -18,7 +19,10 @@ import {
   MenuItem,
   alpha,
   Fab,
+  Snackbar,
+  Alert,
 } from '@mui/material';
+import { AuthContext } from '../context/AuthContext';
 import {
   CalendarToday,
   Add,
@@ -37,10 +41,12 @@ import {
 } from '@mui/icons-material';
 
 const Calendar = () => {
+  const { user } = useContext(AuthContext);
   const [events, setEvents] = useState([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [openDialog, setOpenDialog] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
   const [newEvent, setNewEvent] = useState({
     title: '',
     sport: '',
@@ -160,19 +166,57 @@ const Calendar = () => {
     setEvents(events.filter(e => e.id !== eventId));
   };
 
-  const exportToGoogle = () => {
-    console.log('Exporting to Google Calendar...');
-    // Implement Google Calendar API integration
+  const exportToGoogle = async () => {
+    try {
+      // Check if user is already authenticated (has token)
+      if (!user) {
+        setSnackbar({ 
+          open: true, 
+          message: 'Please login first to connect Google Calendar', 
+          severity: 'warning' 
+        });
+        return;
+      }
+
+      setSnackbar({ open: true, message: 'Connecting to Google Calendar...', severity: 'info' });
+      
+      // Call backend to get Google OAuth URL
+      const response = await axios.get('/api/auth/google');
+      
+      if (response.data?.authUrl) {
+        // Redirect user to Google OAuth consent page
+        window.location.href = response.data.authUrl;
+      } else {
+        setSnackbar({ 
+          open: true, 
+          message: 'Failed to connect to Google Calendar. Please try again.', 
+          severity: 'error' 
+        });
+      }
+    } catch (error) {
+      console.error('Google Calendar connection error:', error);
+      setSnackbar({ 
+        open: true, 
+        message: error.response?.data?.message || 'An error occurred. Please try again later.', 
+        severity: 'error' 
+      });
+    }
   };
 
   const exportToApple = () => {
     console.log('Exporting to Apple Calendar...');
+    setSnackbar({ open: true, message: 'Apple Calendar export coming soon!', severity: 'info' });
     // Generate ICS file
   };
 
   const downloadICS = () => {
     console.log('Downloading ICS file...');
+    setSnackbar({ open: true, message: 'ICS download coming soon!', severity: 'info' });
     // Generate and download ICS file
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
   };
 
   // Get events for today
@@ -204,26 +248,80 @@ const Calendar = () => {
         
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
-            variant="outlined"
+            variant="contained"
             startIcon={<Google />}
             onClick={exportToGoogle}
-            sx={{ textTransform: 'none' }}
+            sx={{ 
+              textTransform: 'none',
+              background: 'linear-gradient(135deg, #4285F4 0%, #34A853 100%)',
+              color: 'white',
+              fontWeight: 600,
+              px: 3,
+              py: 1.2,
+              borderRadius: 2,
+              boxShadow: '0 4px 14px 0 rgba(66, 133, 244, 0.3)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #357AE8 0%, #2D9248 100%)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 20px 0 rgba(66, 133, 244, 0.4)',
+              },
+              '&:active': {
+                transform: 'translateY(0)',
+              }
+            }}
           >
             Sync Google
           </Button>
           <Button
-            variant="outlined"
+            variant="contained"
             startIcon={<Apple />}
             onClick={exportToApple}
-            sx={{ textTransform: 'none' }}
+            sx={{ 
+              textTransform: 'none',
+              background: 'linear-gradient(135deg, #000000 0%, #434343 100%)',
+              color: 'white',
+              fontWeight: 600,
+              px: 3,
+              py: 1.2,
+              borderRadius: 2,
+              boxShadow: '0 4px 14px 0 rgba(0, 0, 0, 0.3)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #1a1a1a 0%, #555555 100%)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 20px 0 rgba(0, 0, 0, 0.4)',
+              },
+              '&:active': {
+                transform: 'translateY(0)',
+              }
+            }}
           >
             Export Apple
           </Button>
           <Button
-            variant="outlined"
+            variant="contained"
             startIcon={<Download />}
             onClick={downloadICS}
-            sx={{ textTransform: 'none' }}
+            sx={{ 
+              textTransform: 'none',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              fontWeight: 600,
+              px: 3,
+              py: 1.2,
+              borderRadius: 2,
+              boxShadow: '0 4px 14px 0 rgba(102, 126, 234, 0.3)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #5568d3 0%, #6a3f8f 100%)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 20px 0 rgba(102, 126, 234, 0.4)',
+              },
+              '&:active': {
+                transform: 'translateY(0)',
+              }
+            }}
           >
             Download ICS
           </Button>
@@ -315,7 +413,7 @@ const Calendar = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Upcoming (7 days)
+                  Upcoming
                 </Typography>
                 <Chip 
                   label={upcomingEvents.length}
@@ -552,6 +650,22 @@ const Calendar = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar 
+        open={snackbar.open} 
+        autoHideDuration={4000} 
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity} 
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };

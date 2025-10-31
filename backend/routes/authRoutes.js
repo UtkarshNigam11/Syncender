@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { google } = require('googleapis');
 const { oauth2Client } = require('../config/google');
+const { protect } = require('../middleware/auth');
 
 // Frontend base URL for redirects
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:3000';
@@ -181,8 +182,8 @@ router.get('/google/callback', async (req, res) => {
   }
 });
 
-// Add Google OAuth login route
-router.get('/google', (req, res) => {
+// Add Google OAuth login route (protected - user must be authenticated)
+router.get('/google', protect, (req, res) => {
   try {
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline',
@@ -195,6 +196,7 @@ router.get('/google', (req, res) => {
       ],
       prompt: 'consent',
       redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+      state: req.user.userId, // Pass user ID to maintain context
     });
     res.json({ authUrl });
   } catch (error) {
