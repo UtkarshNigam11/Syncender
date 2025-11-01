@@ -234,3 +234,165 @@ exports.getCricketMatches = async (req, res) => {
     });
   }
 };
+
+/**
+ * Get unified dashboard data - all sports live and upcoming games
+ * This endpoint consolidates data from multiple sports APIs
+ */
+exports.getDashboardData = async (req, res) => {
+  try {
+    console.log('📊 Fetching unified dashboard data...');
+    
+    // Fetch all sports data in parallel
+    const [nflData, nbaData, eplData, uclData, cricketData] = await Promise.allSettled([
+      sportsApiService.getLiveScores('nfl'),
+      sportsApiService.getLiveScores('nba'),
+      sportsApiService.getSoccerLeagueScores('eng.1'),
+      sportsApiService.getSoccerLeagueScores('uefa.champions'),
+      sportsApiService.getCricketMatches()
+    ]);
+
+    const now = new Date();
+    const threeDaysLater = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    // Helper function to extract and normalize matches from different API formats
+    const extractMatches = (data, sportName, leagueName) => {
+      if (!data || data.status === 'rejected') return [];
+      
+      const apiData = data.value?.data || data.value;
+      const matches = [];
+
+      // ESPN format (NFL, NBA, Soccer)
+      if (apiData && apiData.events && Array.isArray(apiData.events)) {
+        const league = leagueName || apiData.league || apiData.leagues?.[0]?.name || sportName;
+        
+        apiData.events.forEach((event, index) => {
+          const eventDate = new Date(event.date);
+          const state = event.status?.type?.state;
+          const statusName = event.status?.type?.name;
+          
+          // Determine if live
+          const isLive = state === 'in' || state === 'live' || state === 'inprogress' || 
+                        statusName === 'STATUS_IN_PROGRESS' || statusName === 'STATUS_LIVE';
+          
+          // Determine if upcoming (scheduled within next 7 days)
+          const isScheduled = state === 'pre' || statusName === 'STATUS_SCHEDULED';
+          const isUpcoming = (isScheduled && eventDate >= now && eventDate <= sevenDaysLater) || 
+                           (eventDate >= now && eventDate <= threeDaysLater && !isLive && state !== 'post');
+          
+          const homeCompetitor = event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'home');
+          const awayCompetitor = event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'away');
+          
+          matches.push({
+            id: event.id || `${sportName}-${league}-${index}`,
+            sport: sportName,
+            homeTeam: homeCompetitor?.team?.displayName || 'Home Team',
+            awayTeam: awayCompetitor?.team?.displayName || 'Away Team',
+            homeScore: homeCompetitor?.score || '0',
+            awayScore: awayCompetitor?.score || '0',
+            status: event.status?.type?.description || 'Scheduled',
+            venue: event.competitions?.[0]?.venue?.fullName || 'TBD',
+            date: event.date,
+            league: league,
+            isLive,
+            isUpcoming,
+            isFinal: state === 'post' || statusName === 'STATUS_FINAL'
+          });
+        });
+      }
+
+      return matches;
+    };
+
+    // Helper for cricket matches (CricAPI format)
+    const extractCricketMatches = (data) => {
+      if (!data || data.status === 'rejected') return [];
+      
+      const apiData = data.value;
+      const cricketMatches = apiData?.matches || [];
+      const matches = [];
+
+      cricketMatches.forEach((event, index) => {
+        const matchDate = event.dateTimeGMT ? new Date(event.dateTimeGMT) : new Date(event.date);
+        const isLive = event.matchStarted && !event.matchEnded;
+        const isUpcoming = matchDate >= now && matchDate <= threeDaysLater && !event.matchStarted;
+        
+        // Format cricket scores
+        let homeScore = '-';
+        let awayScore = '-';
+        if (event.score && event.score.length > 0) {
+          const score1 = event.score[0];
+          homeScore = `${score1.r}/${score1.w} (${score1.o})`;
+          if (event.score.length > 1) {
+            const score2 = event.score[1];
+            awayScore = `${score2.r}/${score2.w} (${score2.o})`;
+          }
+        }
+
+        matches.push({
+          id: event.id || `cricket-${index}`,
+          sport: 'Cricket',
+          homeTeam: event.teams?.[0] || 'Team 1',
+          awayTeam: event.teams?.[1] || 'Team 2',
+          homeScore,
+          awayScore,
+          status: event.status || 'Scheduled',
+          venue: event.venue || 'TBD',
+          date: event.dateTimeGMT || event.date,
+          league: event.matchType ? event.matchType.toUpperCase() : 'Cricket',
+          matchType: event.matchType,
+          isLive,
+          isUpcoming,
+          isFinal: event.matchEnded
+        });
+      });
+
+      return matches;
+    };
+
+    // Extract all matches
+    const allMatches = [
+      ...extractMatches(nflData, 'NFL'),
+      ...extractMatches(nbaData, 'NBA'),
+      ...extractMatches(eplData, 'Soccer', 'English Premier League'),
+      ...extractMatches(uclData, 'Soccer', 'UEFA Champions League'),
+      ...extractCricketMatches(cricketData)
+    ];
+
+    // Filter and sort
+    const liveGames = allMatches.filter(m => m.isLive);
+    const upcomingGames = allMatches
+      .filter(m => m.isUpcoming)
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    console.log(`✅ Dashboard data: ${liveGames.length} live, ${upcomingGames.length} upcoming`);
+
+    res.json({
+      success: true,
+      data: {
+        liveGames,
+        upcomingGames,
+        totalGames: allMatches.length,
+        stats: {
+          liveCount: liveGames.length,
+          upcomingCount: upcomingGames.length,
+          sportsTracked: 4, // NFL, NBA, Soccer, Cricket
+          timestamp: new Date().toISOString()
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error getting dashboard data:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get dashboard data',
+      error: error.message,
+      data: {
+        liveGames: [],
+        upcomingGames: [],
+        totalGames: 0
+      }
+    });
+  }
+};

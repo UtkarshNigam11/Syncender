@@ -8,6 +8,9 @@ const sportsController = require('../controllers/sportsController');
 // Get supported sports
 router.get('/sports', sportsController.getSports);
 
+// Unified dashboard data endpoint
+router.get('/dashboard', sportsController.getDashboardData);
+
 // ESPN API routes - Live scores, teams, standings
 router.get('/scores/:sport', sportsController.getLiveScores);
 // League-specific soccer scores (e.g., /scores/soccer/eng.1, /scores/soccer/uefa.champions)
