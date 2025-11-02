@@ -350,96 +350,14 @@ exports.searchPlayer = async (playerName) => {
 
 /**
  * Get cricket matches specifically (upcoming fixtures and live status)
+ * Uses CricAPI service
  * @returns {Object} - Cricket matches data
  */
 exports.getCricketMatches = async () => {
   try {
-    let allMatches = [];
-    
-    // Major cricket league IDs from TheSportsDB
-    const cricketLeagues = [
-      { id: 4344, name: 'Indian Premier League' },
-      { id: 4424, name: 'Big Bash League' },
-      { id: 4425, name: 'Pakistan Super League' },
-      { id: 4426, name: 'Caribbean Premier League' },
-      { id: 4427, name: 'Bangladesh Premier League' },
-      { id: 4428, name: 'The Hundred' },
-      { id: 4429, name: 'Vitality Blast' },
-      { id: 4430, name: 'SA20' },
-    ];
-
-    // Get fixtures for next 30 days for each league
-    const currentDate = new Date().toISOString().split('T')[0];
-    
-    const promises = cricketLeagues.map(async (league) => {
-      try {
-        // Get next fixtures for this league
-        const response = await axios.get(
-          `${SPORTS_DB_API}/${SPORTS_DB_KEY}/eventsnextleague.php?id=${league.id}`
-        );
-        
-        if (response.data.events) {
-          return response.data.events.map(event => ({
-            ...event,
-            leagueInfo: league,
-            isUpcoming: true
-          }));
-        }
-        return [];
-      } catch (error) {
-        console.log(`Failed to fetch ${league.name} fixtures:`, error.message);
-        return [];
-      }
-    });
-
-    // Wait for all league fixture requests
-    const leagueResults = await Promise.all(promises);
-    leagueResults.forEach(matches => {
-      allMatches = [...allMatches, ...matches];
-    });
-
-    // Also get current season matches to check for live ones
-    try {
-      const currentResponse = await axios.get(
-        `${SPORTS_DB_API}/${SPORTS_DB_KEY}/eventsseason.php?id=4344&s=2024-2025`
-      );
-      
-      if (currentResponse.data.events) {
-        const currentMatches = currentResponse.data.events.map(event => ({
-          ...event,
-          leagueInfo: { name: 'Indian Premier League' },
-          isUpcoming: false
-        }));
-        allMatches = [...allMatches, ...currentMatches];
-      }
-    } catch (error) {
-      console.log('Failed to fetch current season matches:', error.message);
-    }
-
-    // Filter for future matches and current live matches
-    const now = new Date();
-    const filteredMatches = allMatches.filter(match => {
-      if (!match.dateEvent) return false;
-      
-      const matchDate = new Date(match.dateEvent);
-      const status = (match.strStatus || '').toLowerCase();
-      
-      // Include if it's a future match or currently live
-      return matchDate >= now || 
-             status.includes('live') || 
-             status.includes('in progress') ||
-             status.includes('ongoing') ||
-             status.includes('1st innings') ||
-             status.includes('2nd innings');
-    });
-
-    return {
-      success: true,
-      matches: filteredMatches,
-      sport: 'CRICKET',
-      provider: 'SportsDB',
-      totalMatches: filteredMatches.length
-    };
+    // Use the new cricket API service
+    const cricketService = require('./cricketApiService');
+    return await cricketService.getCricketMatches();
   } catch (error) {
     console.error('Error fetching cricket matches:', error.message);
     throw new Error('Failed to fetch cricket matches');

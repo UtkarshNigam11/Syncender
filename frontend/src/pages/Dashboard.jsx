@@ -21,8 +21,6 @@ import {
   SportsSoccer,
   SportsBasketball,
   SportsFootball,
-  SportsBaseball,
-  SportsHockey,
   SportsHockey as Cricket,
   Schedule,
   Add,
@@ -121,127 +119,28 @@ const Dashboard = () => {
     
     fetchUserStats();
     
-    // Fetch fresh data
+    // Fetch dashboard data from unified backend endpoint
     const fetchSportsData = async () => {
       try {
         setLoading(true);
         
-        // Fetch multiple sports in parallel for better coverage
-        const [
-          nflResponse,
-          nbaResponse,
-          eplResponse,
-          uclResponse,
-          cricketResponse
-        ] = await Promise.all([
-          axios.get('http://localhost:5000/api/sports/scores/nfl'),
-          axios.get('http://localhost:5000/api/sports/scores/nba'),
-          axios.get('http://localhost:5000/api/sports/scores/soccer/eng.1'), // English Premier League
-          axios.get('http://localhost:5000/api/sports/scores/soccer/uefa.champions'), // UEFA Champions League
-          axios.get('http://localhost:5000/api/sports/cricket/matches')
-        ]);
-
-        // --- BEGIN: Unified all-sports logic ---
-        const cricketMatchesRaw = cricketResponse.data?.matches || cricketResponse.data?.data || [];
+        // Use new unified dashboard endpoint
+        const response = await axios.get('http://localhost:5000/api/sports/dashboard');
         
-        // Helper to check if a match is live
-        const isCricketLive = (event) => {
-          const status = (event.strStatus || event.status || '').toLowerCase();
-          return status.includes('live') || status.includes('in progress') || status.includes('inplay') || status.includes('running');
-        };
-        
-        const now = new Date();
-        const threeDaysLater = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
-        
-        function extractMatchesFromApi(data, sportName, leagueOverride) {
-          if (!data) return [];
-          // NFL/ESPN style
-          if (Array.isArray(data.events)) {
-            return data.events.map((event, index) => {
-              const eventDate = new Date(event.date);
-              const state = event.status?.type?.state;
-              const statusName = event.status?.type?.name;
-              
-              // More comprehensive live game detection
-              const isLive = state === 'in' || state === 'live' || state === 'inprogress' || 
-                           statusName === 'STATUS_IN_PROGRESS' || statusName === 'STATUS_LIVE';
-              
-              // More flexible upcoming game detection
-              // Games that are scheduled/pre-game within next 7 days
-              const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-              const isScheduled = state === 'pre' || statusName === 'STATUS_SCHEDULED';
-              const isUpcoming = (isScheduled && eventDate >= now && eventDate <= sevenDaysLater) || 
-                               (eventDate >= now && eventDate <= threeDaysLater && !isLive && state !== 'post');
-              
-              const leagueName = leagueOverride || (data?.leagues?.[0]?.name) || event.league?.name || sportName;
-              return {
-                id: `${sportName}-${leagueName}-${index}`,
-                sport: sportName,
-                homeTeam: event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'home')?.team?.displayName || 'Home Team',
-                awayTeam: event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'away')?.team?.displayName || 'Away Team',
-                homeScore: event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'home')?.score || '0',
-                awayScore: event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'away')?.score || '0',
-                status: event.status?.type?.description || 'Scheduled',
-                venue: event.competitions?.[0]?.venue?.fullName || 'TBD',
-                isLive,
-                isUpcoming,
-                date: event.date,
-                time: undefined,
-                league: leagueName,
-              };
-            });
-          }
-          // Cricket/SportsDB style
-          if (Array.isArray(data)) {
-            return data.map((event, index) => {
-              const matchDate = event.dateEvent ? new Date(event.dateEvent + (event.strTime ? 'T' + event.strTime : '')) : null;
-              const isLive = isCricketLive(event);
-              const isUpcoming = matchDate && matchDate >= now && matchDate <= threeDaysLater && !isLive;
-              return {
-                id: `${sportName}-${event.strLeague || sportName}-${index}`,
-                sport: sportName,
-                homeTeam: event.strHomeTeam || event.team1 || 'Home Team',
-                awayTeam: event.strAwayTeam || event.team2 || 'Away Team',
-                status: event.strStatus || event.status || 'Scheduled',
-                venue: event.strVenue || 'TBD',
-                date: event.dateEvent,
-                time: event.strTime,
-                league: event.strLeague || event.leagueInfo?.name || sportName,
-                isLive,
-                isUpcoming,
-              };
-            });
-          }
-          return [];
-        }
-        
-        // Collect all sports data here (add more as needed)
-        let allMatches = [];
-        allMatches = allMatches.concat(extractMatchesFromApi(nflResponse.data.data, 'NFL'));
-        allMatches = allMatches.concat(extractMatchesFromApi(nbaResponse.data.data, 'NBA'));
-        allMatches = allMatches.concat(extractMatchesFromApi(eplResponse.data.data, 'Soccer', eplResponse.data.league || 'English Premier League'));
-        allMatches = allMatches.concat(extractMatchesFromApi(uclResponse.data.data, 'Soccer', uclResponse.data.league || 'UEFA Champions League'));
-        allMatches = allMatches.concat(extractMatchesFromApi(cricketMatchesRaw, 'Cricket'));
-        // TODO: Add more sports here as you add more APIs
-        
-        // Filter for live and upcoming (within 3 days)
-        const live = allMatches.filter(g => g.isLive);
-        const upcoming = allMatches.filter(g => g.isUpcoming)
-          .sort((a, b) => {
-            const aDate = new Date(a.date + (a.time ? 'T' + a.time : ''));
-            const bDate = new Date(b.date + (b.time ? 'T' + b.time : ''));
-            return aDate - bDate;
-          });
+        if (response.data.success) {
+          const { liveGames, upcomingGames } = response.data.data;
           
-        setLiveGames(live);
-        setUpcomingGames(upcoming);
-        setError('');
-        
-        // Cache the data
-        localStorage.setItem('dashboard_liveGames', JSON.stringify(live));
-        localStorage.setItem('dashboard_upcomingGames', JSON.stringify(upcoming));
-        sessionStorage.setItem('dashboard_spa_nav', 'true');
-        // --- END: Unified all-sports logic ---
+          setLiveGames(liveGames);
+          setUpcomingGames(upcomingGames);
+          setError('');
+          
+          // Cache the data
+          localStorage.setItem('dashboard_liveGames', JSON.stringify(liveGames));
+          localStorage.setItem('dashboard_upcomingGames', JSON.stringify(upcomingGames));
+          sessionStorage.setItem('dashboard_spa_nav', 'true');
+          
+          console.log(`✅ Dashboard loaded: ${liveGames.length} live, ${upcomingGames.length} upcoming`);
+        }
       } catch (error) {
         console.error('Error fetching sports data:', error);
         setError('Unable to load live sports data. Please check if the backend server is running.');
@@ -259,24 +158,20 @@ const Dashboard = () => {
   // Helper functions for sport icons and colors
   const getSportIcon = (sport) => {
     const icons = {
-      NBA: <SportsBasketball />,
-      NFL: <SportsFootball />,
-      MLB: <SportsBaseball />,
-      NHL: <SportsHockey />,
       Cricket: <Cricket />,
+      NBA: <SportsBasketball />,
       Soccer: <SportsSoccer />,
+      NFL: <SportsFootball />,
     };
     return icons[sport] || <SportsSoccer />;
   };
 
   const getSportColor = (sport) => {
     const colors = {
-      NBA: '#FF6B00',
-      NFL: '#0066CC',
-      MLB: '#CC0000',
-      NHL: '#000080',
       Cricket: '#4CAF50',
+      NBA: '#FF6B00',
       Soccer: '#00A86B',
+      NFL: '#0066CC',
     };
     return colors[sport] || '#1976d2';
   };

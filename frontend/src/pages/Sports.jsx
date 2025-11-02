@@ -21,11 +21,7 @@ import {
   SportsSoccer,
   SportsBasketball,
   SportsFootball,
-  SportsBaseball,
-  SportsHockey,
   SportsHockey as Cricket,
-  Sports as TennisIcon,
-  DirectionsCar as FormulaIcon,
   Add,
   TrendingUp,
 } from '@mui/icons-material';
@@ -44,15 +40,10 @@ const Sports = () => {
       try {
         // For now, use mock data since we're skipping authentication
         const mockSports = [
-          { id: 'nfl', name: 'NFL (American Football)', provider: 'ESPN', description: 'National Football League - America\'s premier football competition' },
-          { id: 'nba', name: 'NBA (Basketball)', provider: 'ESPN', description: 'National Basketball Association - The world\'s top basketball league' },
-          { id: 'mlb', name: 'MLB (Baseball)', provider: 'ESPN', description: 'Major League Baseball - America\'s pastime' },
-          { id: 'nhl', name: 'NHL (Hockey)', provider: 'ESPN', description: 'National Hockey League - Premier ice hockey competition' },
-          { id: 'soccer', name: 'Soccer/Football', provider: 'ESPN', description: 'The beautiful game - World\'s most popular sport' },
-          { id: 'cricket', name: 'Cricket', provider: 'SportsDB', description: 'Gentleman\'s game - Popular in India, Australia, England' },
-          { id: 'tennis', name: 'Tennis', provider: 'SportsDB', description: 'Individual sport played on court with rackets' },
-          { id: 'rugby', name: 'Rugby', provider: 'SportsDB', description: 'Physical team sport with oval ball' },
-          { id: 'formula1', name: 'Formula 1', provider: 'SportsDB', description: 'Highest class of international auto racing' },
+          { id: 'cricket', name: 'Cricket', provider: 'SportsDB', description: 'ICC matches, IPL, BBL, PSL, CPL, The Hundred, Asia Cup, Ashes Series' },
+          { id: 'nba', name: 'NBA (Basketball)', provider: 'ESPN', description: 'NBA, WNBA, EuroLeague, Basketball Champions League, FIBA World Cup, Olympics' },
+          { id: 'soccer', name: 'Soccer/Football', provider: 'ESPN', description: 'FIFA World Cup, UEFA Champions League, EPL, La Liga, Serie A, Bundesliga, MLS, Copa America' },
+          { id: 'nfl', name: 'NFL (American Football)', provider: 'ESPN', description: 'National Football League, Super Bowl - America\'s premier football competition' },
         ];
         
         setSports(mockSports);
@@ -68,30 +59,20 @@ const Sports = () => {
 
   const getSportIcon = (sportId) => {
     const icons = {
-      nba: <SportsBasketball />,
-      nfl: <SportsFootball />,
-      mlb: <SportsBaseball />,
-      nhl: <SportsHockey />,
       cricket: <Cricket />,
+      nba: <SportsBasketball />,
       soccer: <SportsSoccer />,
-      tennis: <TennisIcon />,
-      rugby: <SportsFootball />,
-      formula1: <FormulaIcon />,
+      nfl: <SportsFootball />,
     };
     return icons[sportId] || <SportsSoccer />;
   };
 
   const getSportColor = (sportId) => {
     const colors = {
-      nba: '#FF6B00',
-      nfl: '#0066CC',
-      mlb: '#CC0000',
-      nhl: '#000080',
       cricket: '#4CAF50',
+      nba: '#FF6B00',
       soccer: '#009688',
-      tennis: '#9C27B0',
-      rugby: '#795548',
-      formula1: '#F44336',
+      nfl: '#0066CC',
     };
     return colors[sportId] || '#1976d2';
   };

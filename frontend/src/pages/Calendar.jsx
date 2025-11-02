@@ -33,8 +33,7 @@ import {
   SportsSoccer,
   SportsBasketball,
   SportsFootball,
-  SportsBaseball,
-  SportsHockey,
+  SportsHockey as Cricket,
   Google,
   Apple,
   Download,
@@ -108,24 +107,20 @@ const Calendar = () => {
 
   const getSportIcon = (sport) => {
     const icons = {
+      Cricket: <Cricket />,
       NBA: <SportsBasketball />,
-      NFL: <SportsFootball />,
-      MLB: <SportsBaseball />,
-      NHL: <SportsHockey />,
-      Cricket: <SportsHockey />,
       Soccer: <SportsSoccer />,
+      NFL: <SportsFootball />,
     };
     return icons[sport] || <Event />;
   };
 
   const getSportColor = (sport) => {
     const colors = {
-      NBA: '#FF6B00',
-      NFL: '#0066CC',
-      MLB: '#CC0000',
-      NHL: '#000080',
       Cricket: '#4CAF50',
+      NBA: '#FF6B00',
       Soccer: '#009688',
+      NFL: '#0066CC',
     };
     return colors[sport] || '#1976d2';
   };
@@ -585,12 +580,10 @@ const Calendar = () => {
                   onChange={(e) => setNewEvent({ ...newEvent, sport: e.target.value })}
                   fullWidth
                 >
-                  <MenuItem value="NBA">Basketball (NBA)</MenuItem>
-                  <MenuItem value="NFL">Football (NFL)</MenuItem>
-                  <MenuItem value="MLB">Baseball (MLB)</MenuItem>
-                  <MenuItem value="NHL">Hockey (NHL)</MenuItem>
                   <MenuItem value="Cricket">Cricket</MenuItem>
+                  <MenuItem value="NBA">Basketball (NBA)</MenuItem>
                   <MenuItem value="Soccer">Soccer</MenuItem>
+                  <MenuItem value="NFL">Football (NFL)</MenuItem>
                 </TextField>
                 
                 <Box sx={{ display: 'flex', gap: 2 }}>

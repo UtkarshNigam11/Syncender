@@ -25,8 +25,6 @@ import {
   SportsSoccer,
   SportsBasketball,
   SportsFootball,
-  SportsBaseball,
-  SportsHockey,
   SportsHockey as Cricket,
   CalendarToday,
   PlayArrow,
@@ -81,31 +79,39 @@ const Matches = () => {
 
         // Helper to check if a match is live
         const isCricketLive = (event) => {
-          const status = (event.strStatus || event.status || '').toLowerCase();
-          return status.includes('live') || status.includes('in progress') || status.includes('inplay') || status.includes('running');
+          return event.matchStarted && !event.matchEnded;
         };
 
-        // Helper to parse cricket match data
+        // Helper to parse cricket match data from CricAPI
         const parseCricketMatch = (event, index) => {
-          const matchDate = event.dateEvent ? new Date(event.dateEvent + (event.strTime ? 'T' + event.strTime : '')) : null;
+          const matchDate = event.dateTimeGMT ? new Date(event.dateTimeGMT) : new Date(event.date);
+          const dateOnly = new Date(matchDate.getFullYear(), matchDate.getMonth(), matchDate.getDate());
           const isLive = isCricketLive(event);
-          const dateOnly = matchDate ? new Date(matchDate.getFullYear(), matchDate.getMonth(), matchDate.getDate()) : null;
-          const isToday = dateOnly && dateOnly.getTime() === today.getTime();
-          const isUpcoming = dateOnly && dateOnly > today && dateOnly <= threeDaysLater && !isLive;
-          const isCompleted = event.strStatus && (event.strStatus.toLowerCase().includes('finished') || event.strStatus.toLowerCase().includes('complete'));
+          const isToday = dateOnly.getTime() === today.getTime();
+          const isUpcoming = dateOnly > today && dateOnly <= threeDaysLater && !isLive;
+          const isCompleted = event.matchEnded;
+
+          // Get team names
+          const homeTeam = event.teams && event.teams[0] ? event.teams[0] : 'Team 1';
+          const awayTeam = event.teams && event.teams[1] ? event.teams[1] : 'Team 2';
+
+          // Remove live scores as requested - only show match status
+          const homeScore = '-';
+          const awayScore = '-';
 
           return {
-            id: `cricket-${index}`,
+            id: event.id || `cricket-${index}`,
             sport: 'Cricket',
-            homeTeam: event.strHomeTeam || event.team1 || 'Home Team',
-            awayTeam: event.strAwayTeam || event.team2 || 'Away Team',
-            homeScore: event.intHomeScore || event.strHomeScore || '0',
-            awayScore: event.intAwayScore || event.strAwayScore || '0',
-            status: event.strStatus || event.status || 'Scheduled',
-            venue: event.strVenue || 'TBD',
-            date: event.dateEvent,
-            time: event.strTime,
-            league: event.strLeague || event.leagueInfo?.name || 'Cricket',
+            homeTeam,
+            awayTeam,
+            homeScore,
+            awayScore,
+            status: event.status || 'Scheduled',
+            venue: event.venue || 'TBD',
+            date: event.dateTimeGMT || event.date,
+            time: matchDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            league: event.matchType ? event.matchType.toUpperCase() : 'Cricket',
+            matchType: event.matchType, // t20, odi, test
             isLive,
             isToday,
             isUpcoming,
@@ -216,24 +222,20 @@ const Matches = () => {
 
   const getSportIcon = (sport) => {
     const icons = {
-      NBA: <SportsBasketball />,
-      NFL: <SportsFootball />,
-      MLB: <SportsBaseball />,
-      NHL: <SportsHockey />,
       Cricket: <Cricket />,
+      NBA: <SportsBasketball />,
       Soccer: <SportsSoccer />,
+      NFL: <SportsFootball />,
     };
     return icons[sport] || <SportsSoccer />;
   };
 
   const getSportColor = (sport) => {
     const colors = {
-      NBA: '#FF6B00',
-      NFL: '#0066CC',
-      MLB: '#CC0000',
-      NHL: '#000080',
       Cricket: '#4CAF50',
+      NBA: '#FF6B00',
       Soccer: '#009688',
+      NFL: '#0066CC',
     };
     return colors[sport] || '#1976d2';
   };

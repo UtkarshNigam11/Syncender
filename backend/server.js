@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 const cronService = require('./services/cronService');
+const cricketScheduler = require('./services/cricketScheduler');
 
 // Load environment variables
 dotenv.config();
@@ -58,4 +59,7 @@ app.listen(PORT, () => {
   
   // Initialize cron jobs after server starts
   cronService.initializeCronJobs();
+  
+  // Initialize cricket match sync scheduler
+  cricketScheduler.initializeScheduler();
 });
