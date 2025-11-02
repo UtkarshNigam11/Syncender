@@ -95,25 +95,17 @@ const Matches = () => {
           const homeTeam = event.teams && event.teams[0] ? event.teams[0] : 'Team 1';
           const awayTeam = event.teams && event.teams[1] ? event.teams[1] : 'Team 2';
 
-          // Format scores for cricket (e.g., "180/6 (20 overs)")
-          let homeScore = '';
-          let awayScore = '';
-          if (event.score && event.score.length > 0) {
-            const score1 = event.score[0];
-            homeScore = `${score1.r}/${score1.w} (${score1.o})`;
-            if (event.score.length > 1) {
-              const score2 = event.score[1];
-              awayScore = `${score2.r}/${score2.w} (${score2.o})`;
-            }
-          }
+          // Remove live scores as requested - only show match status
+          const homeScore = '-';
+          const awayScore = '-';
 
           return {
             id: event.id || `cricket-${index}`,
             sport: 'Cricket',
             homeTeam,
             awayTeam,
-            homeScore: homeScore || '-',
-            awayScore: awayScore || '-',
+            homeScore,
+            awayScore,
             status: event.status || 'Scheduled',
             venue: event.venue || 'TBD',
             date: event.dateTimeGMT || event.date,

@@ -220,16 +220,180 @@ exports.createEventFromSportsData = async (req, res) => {
 
 /**
  * Get cricket matches specifically (IPL, international, etc.)
+ * Now uses database cache instead of direct API calls
  */
 exports.getCricketMatches = async (req, res) => {
   try {
-    const matches = await sportsApiService.getCricketMatches();
-    res.json(matches);
+    const cricketCacheService = require('../services/cricketCacheService');
+    
+    // Get from cache (no API call)
+    const result = await cricketCacheService.getMatchesFromCache({
+      daysAhead: 7,
+      daysBack: 2,
+      includeCompleted: true,
+      includeLive: true,
+      includeUpcoming: true
+    });
+    
+    res.json(result);
   } catch (error) {
     console.error('Error getting cricket matches:', error);
     res.status(500).json({
       success: false,
       message: 'Failed to get cricket matches',
+      error: error.message,
+      matches: []
+    });
+  }
+};
+
+/**
+ * Force sync cricket matches (admin endpoint)
+ */
+exports.syncCricketMatches = async (req, res) => {
+  try {
+    const cricketCacheService = require('../services/cricketCacheService');
+    const result = await cricketCacheService.forceSyncNow();
+    
+    res.json({
+      success: true,
+      message: 'Cricket matches sync completed',
+      ...result
+    });
+  } catch (error) {
+    console.error('Error syncing cricket matches:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to sync cricket matches',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Clean up old cricket matches (admin endpoint)
+ */
+exports.cleanupCricketMatches = async (req, res) => {
+  try {
+    const cricketCacheService = require('../services/cricketCacheService');
+    const { days = 7 } = req.query; // Default 7 days
+    
+    const result = await cricketCacheService.cleanupOldMatches(parseInt(days));
+    
+    res.json({
+      success: true,
+      message: `Cleaned up matches older than ${days} days`,
+      ...result
+    });
+  } catch (error) {
+    console.error('Error cleaning up cricket matches:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cleanup cricket matches',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get cricket cache statistics (admin endpoint)
+ */
+exports.getCricketCacheStats = async (req, res) => {
+  try {
+    const cricketCacheService = require('../services/cricketCacheService');
+    const stats = await cricketCacheService.getCacheStats();
+    
+    res.json({
+      success: true,
+      stats
+    });
+  } catch (error) {
+    console.error('Error getting cricket cache stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get cache stats',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Cleanup old cricket matches (admin endpoint)
+ */
+exports.cleanupCricketMatches = async (req, res) => {
+  try {
+    const cricketCacheService = require('../services/cricketCacheService');
+    const { daysToKeep = 7 } = req.query;
+    
+    const result = await cricketCacheService.cleanupOldMatches(parseInt(daysToKeep));
+    
+    res.json({
+      success: true,
+      message: `Cleaned up matches older than ${daysToKeep} days`,
+      ...result
+    });
+  } catch (error) {
+    console.error('Error cleaning up cricket matches:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cleanup cricket matches',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get cricket cache stats (admin endpoint)
+ */
+exports.getCricketCacheStats = async (req, res) => {
+  try {
+    const CricketMatch = require('../models/CricketMatch');
+    const cricketScheduler = require('../services/cricketScheduler');
+    
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    
+    const [
+      totalMatches,
+      liveMatches,
+      upcomingMatches,
+      recentMatches,
+      oldMatches,
+      lastFetched
+    ] = await Promise.all([
+      CricketMatch.countDocuments(),
+      CricketMatch.countDocuments({ matchStarted: true, matchEnded: false }),
+      CricketMatch.countDocuments({ 
+        matchStarted: false, 
+        dateTimeGMT: { $gte: now } 
+      }),
+      CricketMatch.countDocuments({ 
+        matchEnded: true, 
+        dateTimeGMT: { $gte: sevenDaysAgo } 
+      }),
+      CricketMatch.countDocuments({ 
+        dateTimeGMT: { $lt: sevenDaysAgo } 
+      }),
+      CricketMatch.findOne().sort({ lastFetched: -1 }).select('lastFetched')
+    ]);
+    
+    res.json({
+      success: true,
+      stats: {
+        total: totalMatches,
+        live: liveMatches,
+        upcoming: upcomingMatches,
+        recent: recentMatches,
+        old: oldMatches,
+        lastFetched: lastFetched?.lastFetched || null
+      },
+      scheduler: cricketScheduler.getSchedulerStatus()
+    });
+  } catch (error) {
+    console.error('Error getting cricket cache stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get cache stats',
       error: error.message
     });
   }
@@ -243,13 +407,16 @@ exports.getDashboardData = async (req, res) => {
   try {
     console.log('📊 Fetching unified dashboard data...');
     
+    // Use cricket cache service instead of direct API calls
+    const cricketCacheService = require('../services/cricketCacheService');
+    
     // Fetch all sports data in parallel
     const [nflData, nbaData, eplData, uclData, cricketData] = await Promise.allSettled([
       sportsApiService.getLiveScores('nfl'),
       sportsApiService.getLiveScores('nba'),
       sportsApiService.getSoccerLeagueScores('eng.1'),
       sportsApiService.getSoccerLeagueScores('uefa.champions'),
-      sportsApiService.getCricketMatches()
+      cricketCacheService.getMatchesFromCache({ daysAhead: 7, daysBack: 2 })
     ]);
 
     const now = new Date();
@@ -305,33 +472,31 @@ exports.getDashboardData = async (req, res) => {
       return matches;
     };
 
-    // Helper for cricket matches (CricAPI format)
+    // Helper for cricket matches (from cache - different format)
     const extractCricketMatches = (data) => {
       if (!data || data.status === 'rejected') return [];
       
-      const apiData = data.value;
-      const cricketMatches = apiData?.matches || [];
+      const cacheData = data.value;
       const matches = [];
+      
+      // Cache returns {live: [], upcoming: [], recent: []}
+      const allCricketMatches = [
+        ...(cacheData?.live || []),
+        ...(cacheData?.upcoming || []),
+        ...(cacheData?.recent || [])
+      ];
 
-      cricketMatches.forEach((event, index) => {
-        const matchDate = event.dateTimeGMT ? new Date(event.dateTimeGMT) : new Date(event.date);
+      allCricketMatches.forEach((event, index) => {
+        const matchDate = event.dateTimeGMT ? new Date(event.dateTimeGMT) : new Date();
         const isLive = event.matchStarted && !event.matchEnded;
         const isUpcoming = matchDate >= now && matchDate <= threeDaysLater && !event.matchStarted;
         
-        // Format cricket scores
-        let homeScore = '-';
-        let awayScore = '-';
-        if (event.score && event.score.length > 0) {
-          const score1 = event.score[0];
-          homeScore = `${score1.r}/${score1.w} (${score1.o})`;
-          if (event.score.length > 1) {
-            const score2 = event.score[1];
-            awayScore = `${score2.r}/${score2.w} (${score2.o})`;
-          }
-        }
+        // Scores are removed from display as per user request
+        const homeScore = '-';
+        const awayScore = '-';
 
         matches.push({
-          id: event.id || `cricket-${index}`,
+          id: event.matchId || event._id || `cricket-${index}`,
           sport: 'Cricket',
           homeTeam: event.teams?.[0] || 'Team 1',
           awayTeam: event.teams?.[1] || 'Team 2',
@@ -339,7 +504,7 @@ exports.getDashboardData = async (req, res) => {
           awayScore,
           status: event.status || 'Scheduled',
           venue: event.venue || 'TBD',
-          date: event.dateTimeGMT || event.date,
+          date: event.dateTimeGMT || new Date(),
           league: event.matchType ? event.matchType.toUpperCase() : 'Cricket',
           matchType: event.matchType,
           isLive,

@@ -24,8 +24,11 @@ router.get('/league/:leagueId/fixtures', sportsController.getLeagueFixtures);
 router.get('/team/:teamName/details', sportsController.getTeamDetails);
 router.get('/player/:playerName/search', sportsController.searchPlayer);
 
-// Cricket specific route
+// Cricket specific routes
 router.get('/cricket/matches', sportsController.getCricketMatches);
+router.post('/cricket/sync', sportsController.syncCricketMatches); // Admin: Force sync
+router.delete('/cricket/cleanup', sportsController.cleanupCricketMatches); // Admin: Cleanup old
+router.get('/cricket/stats', sportsController.getCricketCacheStats); // Admin: Cache stats
 
 // Create event from sports data
 router.post('/create-event', sportsController.createEventFromSportsData);
