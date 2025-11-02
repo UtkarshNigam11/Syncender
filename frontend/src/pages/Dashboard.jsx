@@ -470,10 +470,10 @@ const Dashboard = () => {
               </Card>
             </Grid>
 
-            {/* Favorite Teams Card */}
+            {/* Favourite Teams Card */}
             <Grid item xs={12} sm={6} md={3}>
               <Card
-                onClick={() => navigate('/teams')}
+                onClick={() => navigate('/favourites')}
                 sx={{
                   background: 'linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)',
                   color: 'white',
@@ -519,7 +519,7 @@ const Dashboard = () => {
                     {userStats.favoriteTeams}/{userStats.planLimit}
                   </Typography>
                   <Typography variant="body2" sx={{ opacity: 0.95, fontWeight: 500, fontSize: '0.875rem' }}>
-                    Favorite Teams
+                    Favourite Teams
                   </Typography>
                   <Typography variant="caption" sx={{ opacity: 0.8, mt: 0.5, display: 'block', fontSize: '0.7rem' }}>
                     Auto-sync matches

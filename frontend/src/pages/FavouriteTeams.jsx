@@ -7,26 +7,21 @@ import {
   Grid,
   Card,
   CardContent,
-  CardActionArea,
   Box,
   CircularProgress,
   Alert,
-  Breadcrumbs,
   IconButton,
   Chip,
   Snackbar,
-  Button,
   Avatar,
   alpha,
   TextField,
   InputAdornment,
-  Tabs,
-  Tab,
 } from '@mui/material';
 import { Star, StarBorder, Search, ArrowBack, SportsSoccer, SportsBasketball, SportsFootball, SportsHockey } from '@mui/icons-material';
 import { AuthContext } from '../context/AuthContext';
 
-const FavoriteTeams = () => {
+const FavouriteTeams = () => {
   const { token, getSubscription } = useContext(AuthContext);
   const navigate = useNavigate();
   
@@ -36,12 +31,12 @@ const FavoriteTeams = () => {
   
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [favoriteTeams, setFavoriteTeams] = useState([]);
+  const [favouriteTeams, setFavouriteTeams] = useState([]);
   const [subscription, setSubscription] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
   const [searchTerm, setSearchTerm] = useState('');
 
-  const maxFavorites = subscription?.plan === 'pro' ? 7 : 2;
+  const maxFavourites = subscription?.plan === 'pro' ? 7 : 2;
 
   // Sports with their leagues
   const sportsConfig = [
@@ -104,18 +99,18 @@ const FavoriteTeams = () => {
   }, [token]);
 
   useEffect(() => {
-    const fetchFavorites = async () => {
+    const fetchFavourites = async () => {
       if (!token) return;
       try {
         const res = await axios.get('http://localhost:5000/api/users/me', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setFavoriteTeams(res.data.preferences?.favoriteTeams || []);
+        setFavouriteTeams(res.data.preferences?.favoriteTeams || []);
       } catch (err) {
-        console.error('Error fetching favorites:', err);
+        console.error('Error fetching favourites:', err);
       }
     };
-    fetchFavorites();
+    fetchFavourites();
   }, [token]);
 
   const fetchTeamsForLeague = async (sport, league) => {
@@ -123,16 +118,12 @@ const FavoriteTeams = () => {
     try {
       let url = '';
       if (sport.id === 'cricket') {
-        // For cricket, use SportsDB league endpoint
         url = `http://localhost:5000/api/sports/teams/cricket?league=${league.id}`;
       } else if (sport.id === 'soccer') {
-        // For soccer, use ESPN with league code
         url = `http://localhost:5000/api/sports/teams/soccer?league=${league.code}`;
       } else {
-        // For NFL/NBA, use basic teams endpoint
         url = `http://localhost:5000/api/sports/teams/${sport.id}`;
       }
-      
       const res = await axios.get(url);
       const normalizedTeams = Array.isArray(res.data)
         ? res.data
@@ -152,7 +143,6 @@ const FavoriteTeams = () => {
   const handleSportSelect = (sport) => {
     setSelectedSport(sport);
     if (sport.leagues.length === 1) {
-      // If only one league, skip to teams
       setSelectedLeague(sport.leagues[0]);
       fetchTeamsForLeague(sport, sport.leagues[0]);
       setStep('teams');
@@ -185,55 +175,55 @@ const FavoriteTeams = () => {
     }
   };
 
-  const toggleFavorite = async (teamName) => {
+  const toggleFavourite = async (teamName) => {
     if (!token) {
-      setSnackbar({ open: true, message: 'Please login to add favorite teams', severity: 'warning' });
+      setSnackbar({ open: true, message: 'Please login to add favourite teams', severity: 'warning' });
       return;
     }
 
-    const isFavorite = favoriteTeams.includes(teamName);
+    const isFavourite = favouriteTeams.includes(teamName);
     
-    if (!isFavorite && favoriteTeams.length >= maxFavorites) {
+    if (!isFavourite && favouriteTeams.length >= maxFavourites) {
       setSnackbar({ 
         open: true, 
-        message: `You can only favorite up to ${maxFavorites} teams. ${subscription?.plan !== 'pro' ? 'Upgrade to Pro for more!' : ''}`, 
+        message: `You can only favourite up to ${maxFavourites} teams. ${subscription?.plan !== 'pro' ? 'Upgrade to Pro for more!' : ''}`, 
         severity: 'warning' 
       });
       return;
     }
 
     try {
-      const newFavorites = isFavorite
-        ? favoriteTeams.filter(t => t !== teamName)
-        : [...favoriteTeams, teamName];
+      const newFavourites = isFavourite
+        ? favouriteTeams.filter(t => t !== teamName)
+        : [...favouriteTeams, teamName];
       
       await axios.put('http://localhost:5000/api/users/me', {
-        preferences: { favoriteTeams: newFavorites }
+        preferences: { favoriteTeams: newFavourites }
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      setFavoriteTeams(newFavorites);
+      setFavouriteTeams(newFavourites);
       setSnackbar({ 
         open: true, 
-        message: isFavorite ? 'Team removed from favorites' : 'Team added to favorites! Matches will auto-sync daily at 12 AM.', 
+        message: isFavourite ? 'Team removed from favourites' : 'Team added to favourites! Matches will auto-sync daily at 12 AM.', 
         severity: 'success' 
       });
     } catch (err) {
-      console.error('Error toggling favorite:', err);
-      setSnackbar({ open: true, message: 'Failed to update favorites', severity: 'error' });
+      console.error('Error toggling favourite:', err);
+      setSnackbar({ open: true, message: 'Failed to update favourites', severity: 'error' });
     }
   };
 
   const filteredTeams = teams.filter(team =>
-    team.name.toLowerCase().includes(searchTerm.toLowerCase())
+    (team.name || team.strTeam || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (!token) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Alert severity="info">
-          Please login to manage your favorite teams and enable auto-sync.
+          Please login to manage your favourite teams and enable auto-sync.
         </Alert>
       </Container>
     );
@@ -251,22 +241,22 @@ const FavoriteTeams = () => {
           )}
           <Box sx={{ flexGrow: 1 }}>
             <Typography variant="h4" component="h1" gutterBottom>
-              {step === 'sports' && '⭐ Select Favorite Teams'}
+              {step === 'sports' && '⭐ Select Favourite Teams'}
               {step === 'leagues' && `${selectedSport?.name} - Select League`}
               {step === 'teams' && `${selectedLeague?.name} - Select Teams`}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               {step === 'sports' && 'Choose sports to explore leagues and teams'}
               {step === 'leagues' && 'Pick a league to see available teams'}
-              {step === 'teams' && `Select up to ${maxFavorites} teams for auto-sync (${favoriteTeams.length}/${maxFavorites} selected)`}
+              {step === 'teams' && `Select up to ${maxFavourites} teams for auto-sync (${favouriteTeams.length}/${maxFavourites} selected)`}
             </Typography>
           </Box>
         </Box>
 
         {token && (
           <Alert severity="info" sx={{ mb: 2 }}>
-            ⭐ Your favorite teams' upcoming matches (within 2 days) will automatically sync to your calendar daily at 12 AM.
-            {favoriteTeams.length > 0 && ` Currently tracking: ${favoriteTeams.join(', ')}`}
+            ⭐ Your favourite teams' upcoming matches (within 2 days) will automatically sync to your calendar daily at 12 AM.
+            {favouriteTeams.length > 0 && ` Currently tracking: ${favouriteTeams.join(', ')}`}
           </Alert>
         )}
       </Box>
@@ -376,7 +366,7 @@ const FavoriteTeams = () => {
       {!loading && step === 'teams' && (
         <Grid container spacing={3}>
           {filteredTeams.map((team) => {
-            const isFavorite = favoriteTeams.includes(team.name || team.strTeam);
+            const isFavourite = favouriteTeams.includes(team.name || team.strTeam);
             const teamName = team.name || team.strTeam || 'Unknown Team';
             return (
               <Grid item xs={12} sm={6} md={4} key={team.id || team.idTeam}>
@@ -390,9 +380,9 @@ const FavoriteTeams = () => {
                       bgcolor: 'background.paper',
                       '&:hover': { bgcolor: 'background.paper' }
                     }}
-                    onClick={() => toggleFavorite(teamName)}
+                    onClick={() => toggleFavourite(teamName)}
                   >
-                    {isFavorite ? <Star color="warning" /> : <StarBorder />}
+                    {isFavourite ? <Star color="warning" /> : <StarBorder />}
                   </IconButton>
                   <CardContent sx={{ pt: 6 }}>
                     {(team.logo || team.strTeamBadge) && (
@@ -409,7 +399,7 @@ const FavoriteTeams = () => {
                       <Typography variant="h6" component="div" sx={{ mb: 0 }}>
                         {teamName}
                       </Typography>
-                      {isFavorite && <Chip label="Favorite" size="small" color="warning" />}
+                      {isFavourite && <Chip label="Favourite" size="small" color="warning" />}
                     </Box>
                     {(team.location || team.strStadium) && (
                       <Typography variant="body2" color="text.secondary">
@@ -440,4 +430,4 @@ const FavoriteTeams = () => {
   );
 };
 
-export default FavoriteTeams;
+export default FavouriteTeams;

@@ -12,7 +12,7 @@ import { AdminAuthProvider } from './context/AdminAuthContext';
 // Pages
 import Dashboard from './pages/Dashboard';
 import Sports from './pages/Sports';
-import FavoriteTeams from './pages/FavoriteTeams';
+import FavouriteTeams from './pages/FavouriteTeams';
 import Matches from './pages/Matches';
 import Calendar from './pages/Calendar';
 import TestCricketMatch from './pages/TestCricketMatch';
@@ -121,7 +121,9 @@ function AppLayout() {
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/sports" element={<Sports />} />
-            <Route path="/teams" element={<FavoriteTeams />} />
+            {/* Favourite teams page (British spelling). Keep /teams as an alias for backwards compatibility. */}
+            <Route path="/teams" element={<FavouriteTeams />} />
+            <Route path="/favourites" element={<FavouriteTeams />} />
             <Route path="/matches" element={<Matches />} />
             <Route path="/matches/:teamId" element={<Matches />} />
             <Route path="/calendar" element={<Calendar />} />

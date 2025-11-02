@@ -93,7 +93,7 @@ const Sports = () => {
 
   const handleViewMatches = (sportId) => {
     // Redirect to Favorite Teams page where users can select sport -> league -> team
-    navigate('/teams');
+    navigate('/favourites');
   };
 
   if (loading) {
@@ -114,7 +114,7 @@ const Sports = () => {
           Explore Sports 🏆
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Discover and follow your favorite sports. Add events to your calendar.
+          Discover and follow your favourite sports. Add events to your calendar.
         </Typography>
       </Box>
 

@@ -53,9 +53,9 @@ const menuItems = [
     color: '#9C27B0',
   },
   {
-    text: 'Favorite Teams',
+    text: 'Favourite Teams',
     icon: <TeamsIcon />,
-    path: '/teams',
+    path: '/favourites',
     color: '#FF6B9D',
   },
 ];
@@ -72,12 +72,6 @@ const secondaryItems = [
     icon: <TrendingIcon />,
     path: '/trending',
     color: '#FF9800',
-  },
-  {
-    text: 'Favorites',
-    icon: <FavoriteIcon />,
-    path: '/favorites',
-    color: '#E91E63',
   },
   {
     text: 'Settings',

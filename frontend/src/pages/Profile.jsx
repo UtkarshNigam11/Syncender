@@ -143,13 +143,13 @@ const Profile = () => {
         </SectionCard>
 
         {/* Sports Preferences */}
-        <SectionCard title="Sports Preferences" subtitle={`Choose your favorites. Plan limit: ${plan?.limits?.favoriteTeams ?? 2} teams.`} action={<Button variant="contained" onClick={savePreferences}>Save preferences</Button>}>
+        <SectionCard title="Sports Preferences" subtitle={`Choose your favourites. Plan limit: ${plan?.limits?.favoriteTeams ?? 2} teams.`} action={<Button variant="contained" onClick={savePreferences}>Save preferences</Button>}>
           <Grid container spacing={2}>
             <Grid item xs={12}>
-              <Autocomplete multiple options={sportsOptions} value={preferences.favoriteSports} onChange={(_, v) => setPreferences({ ...preferences, favoriteSports: v })} renderInput={(params) => <TextField {...params} label="Favorite sports" />} />
+              <Autocomplete multiple options={sportsOptions} value={preferences.favoriteSports} onChange={(_, v) => setPreferences({ ...preferences, favoriteSports: v })} renderInput={(params) => <TextField {...params} label="Favourite sports" />} />
             </Grid>
             <Grid item xs={12}>
-              <Autocomplete multiple options={teamsPlaceholder} value={preferences.favoriteTeams} onChange={(_, v) => setPreferences({ ...preferences, favoriteTeams: v })} renderInput={(params) => <TextField {...params} label="Favorite teams or leagues" />} />
+              <Autocomplete multiple options={teamsPlaceholder} value={preferences.favoriteTeams} onChange={(_, v) => setPreferences({ ...preferences, favoriteTeams: v })} renderInput={(params) => <TextField {...params} label="Favourite teams or leagues" />} />
             </Grid>
             <Grid item xs={12}><FormControlLabel control={<Switch checked={!!preferences.notifications?.matchReminders} onChange={(_, c) => setPreferences({ ...preferences, notifications: { ...(preferences.notifications || {}), matchReminders: c } })} />} label="Match reminders" /></Grid>
           </Grid>

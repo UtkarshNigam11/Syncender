@@ -270,7 +270,7 @@ const Settings = () => {
               </Grid>
             </Section>
 
-            <Section title="Favorite Teams" description={`Follow up to ${limit} teams on your current plan.`}
+            <Section title="Favourite Teams" description={`Follow up to ${limit} teams on your current plan.`}
               action={sub?.plan !== 'pro' && <Button onClick={upgrade} variant="contained">Upgrade to Pro</Button>}
             >
               <Stack direction="row" spacing={1} flexWrap="wrap">

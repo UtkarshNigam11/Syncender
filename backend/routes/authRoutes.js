@@ -182,8 +182,34 @@ router.get('/google/callback', async (req, res) => {
   }
 });
 
-// Add Google OAuth login route (protected - user must be authenticated)
-router.get('/google', protect, (req, res) => {
+// Google OAuth login/signup route (PUBLIC - for initial authentication)
+router.get('/google', (req, res) => {
+  try {
+    const authUrl = oauth2Client.generateAuthUrl({
+      access_type: 'offline',
+      response_type: 'code',
+      include_granted_scopes: true,
+      scope: [
+        'https://www.googleapis.com/auth/calendar',
+        'https://www.googleapis.com/auth/userinfo.email',
+        'https://www.googleapis.com/auth/userinfo.profile'
+      ],
+      prompt: 'consent',
+      redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+    });
+    res.json({ authUrl });
+  } catch (error) {
+    console.error('Error generating auth URL:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to generate auth URL',
+      error: error.message 
+    });
+  }
+});
+
+// Google OAuth - Link calendar to existing authenticated user
+router.get('/google/link', protect, (req, res) => {
   try {
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline',

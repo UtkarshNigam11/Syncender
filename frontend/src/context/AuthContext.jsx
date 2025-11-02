@@ -86,7 +86,12 @@ export const AuthProvider = ({ children }) => {
 
   const googleAuth = async () => {
     try {
-      const res = await axios.get('/api/auth/google');
+      // Don't send Authorization header for public Google OAuth initiation
+      const res = await axios.get('/api/auth/google', {
+        headers: {
+          Authorization: undefined
+        }
+      });
       return res.data.authUrl;
     } catch (error) {
       console.error('Google auth error:', error.response?.data || error.message);
