@@ -6,6 +6,7 @@ const morgan = require('morgan');
 const dotenv = require('dotenv');
 const cronService = require('./services/cronService');
 const cricketScheduler = require('./services/cricketScheduler');
+const eventCleanupService = require('./services/eventCleanupService');
 
 // Load environment variables
 dotenv.config();
@@ -66,4 +67,7 @@ app.listen(PORT, () => {
   
   // Initialize cricket match sync scheduler
   cricketScheduler.initializeScheduler();
+  
+  // Initialize event cleanup service
+  eventCleanupService.startAutomaticCleanup();
 });

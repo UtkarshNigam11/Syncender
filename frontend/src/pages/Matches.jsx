@@ -33,6 +33,7 @@ import {
   Add,
   Star,
   StarBorder,
+  Check,
 } from '@mui/icons-material';
 
 const Matches = () => {
@@ -50,175 +51,149 @@ const Matches = () => {
   });
   const [favorites, setFavorites] = useState(new Set());
   const [anchorEl, setAnchorEl] = useState(null);
-  const [calendarMenuEl, setCalendarMenuEl] = useState(null);
-  const [isAddingToCalendar, setIsAddingToCalendar] = useState(false);
-
-  // Helper function to convert 12-hour time to 24-hour format
-  const convertTo24Hour = (time12h) => {
-    if (!time12h) return '19:00:00';
-    
-    const [time, period] = time12h.split(' ');
-    const [hours, minutes] = time.split(':');
-    let hour24 = parseInt(hours);
-    
-    if (period === 'PM' && hour24 !== 12) {
-      hour24 += 12;
-    } else if (period === 'AM' && hour24 === 12) {
-      hour24 = 0;
-    }
-    
-    return `${hour24.toString().padStart(2, '0')}:${(minutes || '00').padStart(2, '0')}:00`;
-  };
+  const [addingMatchId, setAddingMatchId] = useState(null);
+  const [addedEvents, setAddedEvents] = useState(new Set());
 
   useEffect(() => {
     const load = async () => {
       try {
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        const threeDaysLater = new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000);
 
-        // Helper to check if a match is live
-        const isCricketLive = (event) => {
-          return event.matchStarted && !event.matchEnded;
-        };
-
-        // Helper to parse cricket match data from CricAPI
-        const parseCricketMatch = (event, index) => {
-          const matchDate = event.dateTimeGMT ? new Date(event.dateTimeGMT) : new Date(event.date);
-          const dateOnly = new Date(matchDate.getFullYear(), matchDate.getMonth(), matchDate.getDate());
-          const isLive = isCricketLive(event);
-          const isToday = dateOnly.getTime() === today.getTime();
-          const isUpcoming = dateOnly > today && dateOnly <= threeDaysLater && !isLive;
-          const isCompleted = event.matchEnded;
-
-          // Get team names
-          const homeTeam = event.teams && event.teams[0] ? event.teams[0] : 'Team 1';
-          const awayTeam = event.teams && event.teams[1] ? event.teams[1] : 'Team 2';
-
-          // Remove live scores as requested - only show match status
-          const homeScore = '-';
-          const awayScore = '-';
-
-          return {
-            id: event.id || `cricket-${index}`,
-            sport: 'Cricket',
-            homeTeam,
-            awayTeam,
-            homeScore,
-            awayScore,
-            status: event.status || 'Scheduled',
-            venue: event.venue || 'TBD',
-            date: event.dateTimeGMT || event.date,
-            time: matchDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-            league: event.matchType ? event.matchType.toUpperCase() : 'Cricket',
-            matchType: event.matchType, // t20, odi, test
-            isLive,
-            isToday,
-            isUpcoming,
-            final: isCompleted,
+        // Use the same unified dashboard API
+        const response = await axios.get('http://localhost:5000/api/sports/dashboard');
+        
+        if (response.data.success) {
+          const { liveGames, upcomingGames, completedGames } = response.data.data;
+          
+          // Helper to format match data consistently
+          const formatMatch = (game, isLive = false, category = '') => {
+            const matchDate = new Date(game.date);
+            const dateOnly = new Date(matchDate.getFullYear(), matchDate.getMonth(), matchDate.getDate());
+            const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            const isToday = dateOnly.getTime() === todayDate.getTime();
+            
+            // Create unique ID by combining game ID with category to avoid duplicates
+            const uniqueId = game.id 
+              ? `${category}-${game.id}` 
+              : `${category}-${game.sport}-${game.homeTeam}-${game.awayTeam}-${matchDate.getTime()}`;
+            
+            return {
+              id: uniqueId,
+              sport: game.sport,
+              homeTeam: game.homeTeam,
+              awayTeam: game.awayTeam,
+              homeScore: game.homeScore || '-',
+              awayScore: game.awayScore || '-',
+              status: game.status || 'Scheduled',
+              venue: game.venue || 'TBD',
+              date: matchDate.toLocaleDateString('en-GB'), // DD/MM/YYYY
+              time: matchDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+              dateTime: matchDate, // For sorting
+              league: game.league || game.sport,
+              isLive: isLive,
+              isToday: isToday,
+              isUpcoming: !isLive && !isToday && dateOnly > todayDate,
+              final: game.isFinal || false,
+            };
           };
-        };
 
-        // Helper to parse ESPN-style events
-        const parseESPNEvent = (event, sportName, index) => {
-          const state = event.status?.type?.state;
-          const statusName = event.status?.type?.name;
-          const isLive = state === 'in' || state === 'live' || state === 'inprogress' || statusName === 'STATUS_IN_PROGRESS' || statusName === 'STATUS_LIVE';
-          const isPost = state === 'post' || statusName === 'STATUS_FINAL' || statusName === 'STATUS_FULL_TIME';
-          const dateISO = event.date;
-          const date = new Date(dateISO);
-          const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-          const isToday = dateOnly.getTime() === today.getTime();
-          const isUpcoming = dateOnly > today && dateOnly <= threeDaysLater && !isLive && !isPost;
-
-          const competitors = event.competitions?.[0]?.competitors || [];
-          const homeCompetitor = competitors.find(c => c.homeAway === 'home');
-          const awayCompetitor = competitors.find(c => c.homeAway === 'away');
-
-          return {
-            id: `${sportName}-${index}`,
-            sport: sportName,
-            homeTeam: homeCompetitor?.team?.displayName || 'Home',
-            awayTeam: awayCompetitor?.team?.displayName || 'Away',
-            homeScore: homeCompetitor?.score || '0',
-            awayScore: awayCompetitor?.score || '0',
-            venue: event.competitions?.[0]?.venue?.fullName || 'TBD',
-            date: dateISO,
-            time: undefined,
-            isLive,
-            isToday,
-            isUpcoming,
-            final: isPost,
-          };
-        };
-
-        // Fetch all sports in parallel
-        const [
-          nflResponse,
-          nbaResponse,
-          eplResponse,
-          uclResponse,
-          cricketResponse
-        ] = await Promise.all([
-          axios.get('http://localhost:5000/api/sports/scores/nfl').catch(() => ({ data: { data: { events: [] } } })),
-          axios.get('http://localhost:5000/api/sports/scores/nba').catch(() => ({ data: { data: { events: [] } } })),
-          axios.get('http://localhost:5000/api/sports/scores/soccer/eng.1').catch(() => ({ data: { data: { events: [] } } })),
-          axios.get('http://localhost:5000/api/sports/scores/soccer/uefa.champions').catch(() => ({ data: { data: { events: [] } } })),
-          axios.get('http://localhost:5000/api/sports/cricket/matches').catch(() => ({ data: { matches: [] } }))
-        ]);
-
-        // Process all matches
-        const allMatches = [];
-
-        // NFL matches
-        const nflEvents = nflResponse.data?.data?.events || [];
-        nflEvents.forEach((event, i) => allMatches.push(parseESPNEvent(event, 'NFL', i)));
-
-        // NBA matches
-        const nbaEvents = nbaResponse.data?.data?.events || [];
-        nbaEvents.forEach((event, i) => allMatches.push(parseESPNEvent(event, 'NBA', i)));
-
-        // EPL matches
-        const eplEvents = eplResponse.data?.data?.events || [];
-        eplEvents.forEach((event, i) => allMatches.push(parseESPNEvent(event, 'Soccer', i)));
-
-        // UCL matches
-        const uclEvents = uclResponse.data?.data?.events || [];
-        uclEvents.forEach((event, i) => allMatches.push(parseESPNEvent(event, 'Soccer', i + eplEvents.length)));
-
-        // Cricket matches
-        const cricketMatches = cricketResponse.data?.matches || cricketResponse.data?.data || [];
-        cricketMatches.forEach((event, i) => allMatches.push(parseCricketMatch(event, i)));
-
-        // Categorize matches
-        const bucket = { live: [], today: [], upcoming: [], completed: [] };
-        allMatches.forEach((match) => {
-          if (match.isLive) {
-            bucket.live.push(match);
-          } else if (match.final) {
-            bucket.completed.push(match);
-          } else if (match.isToday) {
-            bucket.today.push(match);
-          } else if (match.isUpcoming) {
-            bucket.upcoming.push(match);
-          }
+          // Format live games
+          const formattedLive = liveGames.map(game => formatMatch(game, true, 'live'));
+          
+          // Format upcoming games (includes today and future)
+          const formattedUpcoming = upcomingGames.map((game, index) => formatMatch(game, false, `upcoming-${index}`));
+          
+          // Format completed games (from database - last 3 days)
+          const formattedCompleted = (completedGames || []).map((game, index) => formatMatch(game, false, `completed-${index}`));
+          
+          // Separate today's games from future games
+          const todayGames = formattedUpcoming.filter(match => match.isToday);
+          const futureGames = formattedUpcoming.filter(match => match.isUpcoming);
+          
+          // Sort all matches by start time
+          const sortByTime = (a, b) => a.dateTime - b.dateTime;
+          
+          setMatches({
+            live: formattedLive.sort(sortByTime),
+            today: todayGames.sort(sortByTime),
+            upcoming: futureGames.sort(sortByTime),
+            completed: formattedCompleted.sort((a, b) => b.dateTime - a.dateTime), // Most recent first
+          });
+        }
+      } catch (error) {
+        console.error('Error loading matches:', error);
+        setMatches({
+          live: [],
+          today: [],
+          upcoming: [],
+          completed: [],
         });
-
-        // Sort upcoming matches by date
-        bucket.upcoming.sort((a, b) => {
-          const aDate = new Date(a.date + (a.time ? 'T' + a.time : ''));
-          const bDate = new Date(b.date + (b.time ? 'T' + b.time : ''));
-          return aDate - bDate;
-        });
-
-        setMatches(bucket);
-      } catch (e) {
-        console.error('Failed to load matches:', e);
-        setMatches({ live: [], today: [], upcoming: [], completed: [] });
       }
     };
     load();
+    fetchUserEvents();
   }, []);
+
+  const fetchUserEvents = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await axios.get('http://localhost:5000/api/events', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (response.data.success) {
+        // Create a set of event identifiers using multiple matching criteria
+        const eventSet = new Set();
+        response.data.events.forEach(event => {
+          // Create multiple identifiers for better matching
+          // Method 1: Normalize team names and create identifier
+          const homeTeam = event.teams?.home || event.title?.split('vs')?.[1]?.trim() || '';
+          const awayTeam = event.teams?.away || event.title?.split('vs')?.[0]?.trim() || '';
+          
+          if (homeTeam && awayTeam) {
+            // Normalize: lowercase, remove extra spaces, remove special chars
+            const normalizeTeam = (team) => team.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const id1 = `${normalizeTeam(awayTeam)}-${normalizeTeam(homeTeam)}`;
+            const id2 = `${normalizeTeam(homeTeam)}-${normalizeTeam(awayTeam)}`; // Both orders
+            eventSet.add(id1);
+            eventSet.add(id2);
+          }
+          
+          // Method 2: Also store title-based identifier as fallback
+          if (event.title) {
+            const titleId = event.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+            eventSet.add(titleId);
+          }
+        });
+        console.log('Matches: Loaded', response.data.events.length, 'events from calendar');
+        console.log('Matches: Created', eventSet.size, 'match identifiers');
+        setAddedEvents(eventSet);
+      }
+    } catch (error) {
+      console.error('Error fetching user events:', error);
+    }
+  };
+
+  const isEventAdded = (match) => {
+    // Normalize team names
+    const normalizeTeam = (team) => team.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const homeNorm = normalizeTeam(match.homeTeam);
+    const awayNorm = normalizeTeam(match.awayTeam);
+    
+    // Check both team orders
+    const id1 = `${awayNorm}-${homeNorm}`;
+    const id2 = `${homeNorm}-${awayNorm}`;
+    
+    // Also check title format
+    const titleId = `${match.awayTeam} vs ${match.homeTeam}`.toLowerCase().replace(/[^a-z0-9]/g, '');
+    
+    return addedEvents.has(id1) || addedEvents.has(id2) || addedEvents.has(titleId);
+  };
 
   const getSportIcon = (sport) => {
     const icons = {
@@ -255,7 +230,7 @@ const Matches = () => {
   };
 
   const addToCalendar = async (match, calendarType = 'google') => {
-    setIsAddingToCalendar(true);
+    setAddingMatchId(match.id);
     try {
       // Parse date and time more reliably
       let startTime;
@@ -263,13 +238,9 @@ const Matches = () => {
         // For today's matches, use current date with the specified time
         const today = new Date();
         if (match.time) {
-          const [time, period] = match.time.split(' ');
-          const [hours, minutes] = time.split(':');
-          let hour24 = parseInt(hours);
-          if (period === 'PM' && hour24 !== 12) hour24 += 12;
-          if (period === 'AM' && hour24 === 12) hour24 = 0;
-          
-          today.setHours(hour24, parseInt(minutes || 0), 0, 0);
+          // Time is now in 24-hour format (HH:MM)
+          const [hours, minutes] = match.time.split(':');
+          today.setHours(parseInt(hours), parseInt(minutes || 0), 0, 0);
           startTime = today;
         } else {
           startTime = new Date();
@@ -277,7 +248,8 @@ const Matches = () => {
       } else if (match.date.includes('-')) {
         // Format: YYYY-MM-DD
         if (match.time) {
-          startTime = new Date(`${match.date}T${convertTo24Hour(match.time)}`);
+          // Time is now in 24-hour format (HH:MM)
+          startTime = new Date(`${match.date}T${match.time}:00`);
         } else {
           startTime = new Date(`${match.date}T19:00:00`);
         }
@@ -399,6 +371,18 @@ const Matches = () => {
         });
         
         console.log('Google Calendar response:', response.data);
+        
+        // Check if event already exists
+        if (response.data.alreadyExists) {
+          console.log('Event already exists in calendar');
+          // Update the UI to show it's added
+          fetchUserEvents();
+          return;
+        }
+        
+        // Event was successfully added
+        console.log('Event added successfully');
+        fetchUserEvents();
       }
     } catch (error) {
       console.error('Error adding to calendar:', error);
@@ -412,7 +396,9 @@ const Matches = () => {
         }
       }
     } finally {
-      setIsAddingToCalendar(false);
+      setAddingMatchId(null);
+      // Refresh the list of added events
+      fetchUserEvents();
     }
   };
 
@@ -498,8 +484,8 @@ const Matches = () => {
                 <Typography 
                   variant="h6" 
                   sx={{ 
-                    fontWeight: match.final && match.homeScore > match.awayScore ? 700 : 600,
-                    color: match.final && match.homeScore < match.awayScore ? 'text.disabled' : 'text.primary',
+                    fontWeight: match.final && Number(match.awayScore) > Number(match.homeScore) ? 700 : 600,
+                    color: match.final && Number(match.awayScore) < Number(match.homeScore) ? 'text.disabled' : 'text.primary',
                   }}
                 >
                   {match.awayTeam}
@@ -512,8 +498,8 @@ const Matches = () => {
                 <Typography 
                   variant="h6" 
                   sx={{ 
-                    fontWeight: match.final && match.awayScore > match.homeScore ? 700 : 600,
-                    color: match.final && match.awayScore < match.homeScore ? 'text.disabled' : 'text.primary',
+                    fontWeight: match.final && Number(match.homeScore) > Number(match.awayScore) ? 700 : 600,
+                    color: match.final && Number(match.homeScore) < Number(match.awayScore) ? 'text.disabled' : 'text.primary',
                   }}
                 >
                   {match.homeTeam}
@@ -554,8 +540,8 @@ const Matches = () => {
                 <Typography 
                   variant="h5" 
                   sx={{ 
-                    fontWeight: match.homeScore > match.awayScore ? 700 : 400,
-                    color: match.homeScore < match.awayScore ? 'text.disabled' : 'text.primary',
+                    fontWeight: Number(match.awayScore) > Number(match.homeScore) ? 700 : 400,
+                    color: Number(match.awayScore) < Number(match.homeScore) ? 'text.disabled' : 'text.primary',
                   }}
                 >
                   {match.awayScore || 0}
@@ -566,8 +552,8 @@ const Matches = () => {
                 <Typography 
                   variant="h5" 
                   sx={{ 
-                    fontWeight: match.awayScore > match.homeScore ? 700 : 400,
-                    color: match.awayScore < match.homeScore ? 'text.disabled' : 'text.primary',
+                    fontWeight: Number(match.homeScore) > Number(match.awayScore) ? 700 : 400,
+                    color: Number(match.homeScore) < Number(match.awayScore) ? 'text.disabled' : 'text.primary',
                   }}
                 >
                   {match.homeScore || 0}
@@ -585,7 +571,7 @@ const Matches = () => {
                   ? `Live` 
                   : match.final 
                     ? `Final - ${match.date}`
-                    : `${match.date} ${match.time || ''}`
+                    : `${match.time || ''} ${match.date}`
                 }
               </Typography>
             </Box>
@@ -594,40 +580,25 @@ const Matches = () => {
             {showAddToCalendar && (
               <Box sx={{ mt: 'auto' }}>
                 <Button
-                  variant="outlined"
+                  variant={isEventAdded(match) ? "contained" : "outlined"}
                   size="small"
                   fullWidth
-                  startIcon={<CalendarToday />}
-                  onClick={(e) => setCalendarMenuEl(e.currentTarget)}
-                  disabled={isAddingToCalendar}
+                  startIcon={isEventAdded(match) ? <Check /> : <CalendarToday />}
+                  onClick={() => addToCalendar(match, 'google')}
+                  disabled={addingMatchId === match.id || isEventAdded(match)}
                   sx={{
                     borderColor: getSportColor(match.sport),
-                    color: getSportColor(match.sport),
+                    color: isEventAdded(match) ? 'white' : getSportColor(match.sport),
+                    backgroundColor: isEventAdded(match) ? getSportColor(match.sport) : 'transparent',
                     '&:hover': {
-                      backgroundColor: alpha(getSportColor(match.sport), 0.08),
+                      backgroundColor: isEventAdded(match) 
+                        ? getSportColor(match.sport) 
+                        : alpha(getSportColor(match.sport), 0.08),
                     },
                   }}
                 >
-                  {isAddingToCalendar ? 'Adding...' : 'Add to Calendar'}
+                  {addingMatchId === match.id ? 'Adding...' : isEventAdded(match) ? 'Added' : 'Add to Calendar'}
                 </Button>
-                <Menu
-                  anchorEl={calendarMenuEl}
-                  open={Boolean(calendarMenuEl)}
-                  onClose={() => setCalendarMenuEl(null)}
-                >
-                  <MenuItem onClick={() => {
-                    addToCalendar(match, 'google');
-                    setCalendarMenuEl(null);
-                  }}>
-                    Google Calendar
-                  </MenuItem>
-                  <MenuItem onClick={() => {
-                    addToCalendar(match, 'apple');
-                    setCalendarMenuEl(null);
-                  }}>
-                    Apple Calendar
-                  </MenuItem>
-                </Menu>
               </Box>
             )}
           </CardContent>

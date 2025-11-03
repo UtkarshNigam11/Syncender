@@ -39,9 +39,62 @@ const Dashboard = () => {
   const [calendarStatus, setCalendarStatus] = useState({}); // Track calendar add status for each game
   const hasFetchedData = useRef(false);
 
+  // Fetch user's existing calendar events to check which matches are already added
+  const fetchUserEvents = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const response = await axios.get('http://localhost:5000/api/events', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (response.data.success) {
+        // Mark events as added based on multiple matching criteria
+        const statusUpdates = {};
+        response.data.events.forEach(event => {
+          // Extract team names from event
+          const homeTeam = event.teams?.home || event.title?.split('vs')?.[1]?.trim() || '';
+          const awayTeam = event.teams?.away || event.title?.split('vs')?.[0]?.trim() || '';
+          
+          if (homeTeam && awayTeam) {
+            // Normalize: lowercase, remove special chars
+            const normalizeTeam = (team) => team.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const homeNorm = normalizeTeam(homeTeam);
+            const awayNorm = normalizeTeam(awayTeam);
+            
+            // Create IDs in both team orders
+            const id1 = `${awayNorm}-${homeNorm}`;
+            const id2 = `${homeNorm}-${awayNorm}`;
+            statusUpdates[id1] = 'added';
+            statusUpdates[id2] = 'added';
+          }
+          
+          // Also add title-based ID as fallback
+          if (event.title) {
+            const titleId = event.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+            statusUpdates[titleId] = 'added';
+          }
+        });
+        console.log('Dashboard: Loaded', response.data.events.length, 'events from calendar');
+        console.log('Dashboard: Created', Object.keys(statusUpdates).length, 'match identifiers');
+        setCalendarStatus(statusUpdates);
+      }
+    } catch (error) {
+      console.error('Error fetching user events:', error);
+    }
+  };
+
   // Function to add match to calendar
   const addToCalendar = async (game) => {
-    const gameId = `${game.awayTeam}-${game.homeTeam}-${game.date}`;
+    // Normalize team names for consistent matching
+    const normalizeTeam = (team) => team.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const homeNorm = normalizeTeam(game.homeTeam);
+    const awayNorm = normalizeTeam(game.awayTeam);
+    const gameId = `${awayNorm}-${homeNorm}`;
+    
     setCalendarStatus(prev => ({ ...prev, [gameId]: 'loading' }));
     
     try {
@@ -68,13 +121,24 @@ const Dashboard = () => {
           return;
       }
 
-      await axios.post('http://localhost:5000/api/events', eventData, {
+      const response = await axios.post('http://localhost:5000/api/events', eventData, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
       
+      // Check if event already exists
+      if (response.data.alreadyExists) {
+        console.log('Event already exists in calendar');
+        setCalendarStatus(prev => ({ ...prev, [gameId]: 'added' }));
+        return;
+      }
+      
+      console.log('Event added successfully, refreshing event list...');
+      // Set status to added immediately
       setCalendarStatus(prev => ({ ...prev, [gameId]: 'added' }));
+      // Also refresh the user events list to update all button states
+      await fetchUserEvents();
     } catch (error) {
       console.error('Error adding to calendar:', error);
       setCalendarStatus(prev => ({ ...prev, [gameId]: 'failed' }));
@@ -118,6 +182,7 @@ const Dashboard = () => {
     };
     
     fetchUserStats();
+    fetchUserEvents();
     
     // Fetch dashboard data from unified backend endpoint
     const fetchSportsData = async () => {
@@ -605,8 +670,8 @@ const Dashboard = () => {
                           </Avatar>
                           <Box sx={{ flex: 1 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                                {game.awayTeam} @ {game.homeTeam}
+                              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                {game.awayTeam} vs {game.homeTeam}
                               </Typography>
                               {game.isLive && (
                                 <Chip 
@@ -753,17 +818,21 @@ const Dashboard = () => {
                         </Avatar>
                         <Box sx={{ flexGrow: 1 }}>
                           <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                            {game.awayTeam} @ {game.homeTeam}
+                            {game.awayTeam} vs {game.homeTeam}
                           </Typography>
                           <Typography variant="caption" color="text.secondary" display="block">
-                            {game.date ? new Date(game.date).toLocaleDateString() : 'TBD'}
+                            {game.date ? new Date(game.date).toLocaleDateString('en-GB') : 'TBD'}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {game.venue || 'Venue TBD'}
                           </Typography>
                         </Box>
                         {(() => {
-                          const gameId = `${game.awayTeam}-${game.homeTeam}-${game.date}`;
+                          // Normalize team names for consistent matching
+                          const normalizeTeam = (team) => team.toLowerCase().replace(/[^a-z0-9]/g, '');
+                          const homeNorm = normalizeTeam(game.homeTeam);
+                          const awayNorm = normalizeTeam(game.awayTeam);
+                          const gameId = `${awayNorm}-${homeNorm}`;
                           const status = calendarStatus[gameId];
                           
                           if (status === 'added') {

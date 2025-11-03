@@ -255,7 +255,7 @@ function AdminUsers() {
                   </TableCell>
                   <TableCell>{user.eventCount || 0}</TableCell>
                   <TableCell>
-                    {new Date(user.createdAt).toLocaleDateString()}
+                    {new Date(user.createdAt).toLocaleDateString('en-GB')}
                   </TableCell>
                   <TableCell>
                     <IconButton

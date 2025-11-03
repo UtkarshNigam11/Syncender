@@ -21,12 +21,11 @@ import {
   Fab,
   Snackbar,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import { AuthContext } from '../context/AuthContext';
 import {
   CalendarToday,
-  Add,
-  Edit,
   Delete,
   Share,
   Event,
@@ -42,68 +41,150 @@ import {
 const Calendar = () => {
   const { user } = useContext(AuthContext);
   const [events, setEvents] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [openDialog, setOpenDialog] = useState(false);
-  const [editingEvent, setEditingEvent] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
-  const [newEvent, setNewEvent] = useState({
-    title: '',
-    sport: '',
-    teams: { home: '', away: '' },
-    date: '',
-    time: '',
-    venue: '',
-    type: 'sports', // 'sports' or 'personal'
-  });
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
-  // Mock calendar events
+  // Fetch events from backend
+  const fetchEvents = async () => {
+    if (!user) {
+      console.log('User not logged in, skipping event fetch');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await axios.get('/api/events');
+      const formattedEvents = response.data.map(event => ({
+        id: event._id,
+        title: event.title,
+        sport: event.sport,
+        teams: event.teams,
+        date: new Date(event.startTime).toISOString().split('T')[0],
+        time: new Date(event.startTime).toTimeString().slice(0, 5),
+        venue: event.location || 'TBA',
+        type: 'sports',
+        status: event.status || 'upcoming',
+        externalIds: event.externalIds,
+        googleCalendarEventId: event.googleCalendarEventId || event.externalIds?.googleCalendar,
+      }));
+      setEvents(formattedEvents);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      if (error.response?.status === 401) {
+        setSnackbar({ 
+          open: true, 
+          message: 'Please login to view your calendar events', 
+          severity: 'warning' 
+        });
+      } else {
+        setSnackbar({ 
+          open: true, 
+          message: 'Failed to load events', 
+          severity: 'error' 
+        });
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Sync with Google Calendar
+  const syncWithGoogle = async () => {
+    if (!user) {
+      setSnackbar({ 
+        open: true, 
+        message: 'Please login to sync with Google Calendar', 
+        severity: 'warning' 
+      });
+      return;
+    }
+
+    try {
+      setSyncing(true);
+      setSnackbar({ 
+        open: true, 
+        message: 'Syncing with Google Calendar...', 
+        severity: 'info' 
+      });
+      
+      const response = await axios.post('/api/events/sync-google');
+      
+      console.log('📊 Sync response:', response.data);
+      console.log('📊 Response data array:', response.data.data);
+      console.log('📊 Response data length:', response.data.data?.length);
+      
+      if (response.data.success) {
+        const formattedEvents = response.data.data.map(event => ({
+          id: event._id,
+          title: event.title,
+          sport: event.sport,
+          teams: event.teams,
+          date: new Date(event.startTime).toISOString().split('T')[0],
+          time: new Date(event.startTime).toTimeString().slice(0, 5),
+          venue: event.location || 'TBA',
+          type: 'sports',
+          status: event.status || 'upcoming',
+          externalIds: event.externalIds,
+          googleCalendarEventId: event.googleCalendarEventId || event.externalIds?.googleCalendar,
+        }));
+        
+        console.log(`📊 Formatted events count: ${formattedEvents.length}`);
+        console.log('📋 Events after sync:', formattedEvents);
+        console.log('📋 Event titles:', formattedEvents.map(e => e.title));
+        console.log('📋 Event dates:', formattedEvents.map(e => e.date));
+        
+        setEvents(formattedEvents);
+        console.log('✅ Events state updated');
+        
+        const syncInfo = response.data.syncInfo;
+        const message = syncInfo.deletedFromLocal > 0 
+          ? `Sync complete! ${syncInfo.deletedFromLocal} event(s) removed (deleted from Google Calendar)`
+          : 'Sync complete! All events are up to date';
+        
+        setSnackbar({ 
+          open: true, 
+          message, 
+          severity: 'success' 
+        });
+      }
+    } catch (error) {
+      console.error('Error syncing with Google Calendar:', error);
+      
+      // Check if Google Calendar is not connected
+      if (error.response?.status === 400 && error.response?.data?.message?.includes('not connected')) {
+        setSnackbar({ 
+          open: true, 
+          message: 'Google Calendar not connected. Click "Sync Google" to connect.', 
+          severity: 'info' 
+        });
+        throw error; // Re-throw to trigger connection flow in exportToGoogle
+      } else if (error.response?.status === 401) {
+        setSnackbar({ 
+          open: true, 
+          message: 'Please login to sync with Google Calendar', 
+          severity: 'warning' 
+        });
+      } else {
+        setSnackbar({ 
+          open: true, 
+          message: error.response?.data?.message || 'Failed to sync with Google Calendar', 
+          severity: 'error' 
+        });
+      }
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   useEffect(() => {
-    const mockEvents = [
-      {
-        id: 1,
-        title: 'Lakers vs Warriors',
-        sport: 'NBA',
-        teams: { home: 'Lakers', away: 'Warriors' },
-        date: '2025-08-01',
-        time: '20:00',
-        venue: 'Crypto.com Arena',
-        type: 'sports',
-        status: 'upcoming',
-      },
-      {
-        id: 2,
-        title: 'India vs Australia',
-        sport: 'Cricket',
-        teams: { home: 'India', away: 'Australia' },
-        date: '2025-08-02',
-        time: '14:30',
-        venue: 'MCG, Melbourne',
-        type: 'sports',
-        status: 'upcoming',
-      },
-      {
-        id: 3,
-        title: 'Cowboys vs Giants',
-        sport: 'NFL',
-        teams: { home: 'Cowboys', away: 'Giants' },
-        date: '2025-08-03',
-        time: '18:00',
-        venue: 'AT&T Stadium',
-        type: 'sports',
-        status: 'upcoming',
-      },
-      {
-        id: 4,
-        title: 'Personal Training',
-        date: '2025-08-01',
-        time: '08:00',
-        venue: 'Local Gym',
-        type: 'personal',
-        status: 'upcoming',
-      },
-    ];
-    setEvents(mockEvents);
-  }, []);
+    if (user) {
+      fetchEvents();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
 
   const getSportIcon = (sport) => {
     const icons = {
@@ -125,40 +206,27 @@ const Calendar = () => {
     return colors[sport] || '#1976d2';
   };
 
-  const handleCreateEvent = () => {
-    setEditingEvent(null);
-    setNewEvent({
-      title: '',
-      sport: '',
-      teams: { home: '', away: '' },
-      date: '',
-      time: '',
-      venue: '',
-      type: 'sports',
-    });
-    setOpenDialog(true);
-  };
-
-  const handleEditEvent = (event) => {
-    setEditingEvent(event);
-    setNewEvent(event);
-    setOpenDialog(true);
-  };
-
-  const handleSaveEvent = () => {
-    if (editingEvent) {
-      // Update existing event
-      setEvents(events.map(e => e.id === editingEvent.id ? { ...newEvent, id: editingEvent.id } : e));
-    } else {
-      // Create new event
-      const id = Math.max(...events.map(e => e.id), 0) + 1;
-      setEvents([...events, { ...newEvent, id, status: 'upcoming' }]);
+  const handleDeleteEvent = async (eventId) => {
+    if (!window.confirm('Are you sure you want to delete this event? It will also be removed from Google Calendar.')) {
+      return;
     }
-    setOpenDialog(false);
-  };
 
-  const handleDeleteEvent = (eventId) => {
-    setEvents(events.filter(e => e.id !== eventId));
+    try {
+      await axios.delete(`/api/events/${eventId}`);
+      setSnackbar({ 
+        open: true, 
+        message: 'Event deleted successfully', 
+        severity: 'success' 
+      });
+      fetchEvents(); // Reload events
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      setSnackbar({ 
+        open: true, 
+        message: 'Failed to delete event', 
+        severity: 'error' 
+      });
+    }
   };
 
   const exportToGoogle = async () => {
@@ -173,28 +241,38 @@ const Calendar = () => {
         return;
       }
 
-      setSnackbar({ open: true, message: 'Connecting to Google Calendar...', severity: 'info' });
-      
-      // Call backend to get Google OAuth URL
-      const response = await axios.get('/api/auth/google');
-      
-      if (response.data?.authUrl) {
-        // Redirect user to Google OAuth consent page
-        window.location.href = response.data.authUrl;
-      } else {
+      // Try to sync first (if already connected)
+      await syncWithGoogle();
+    } catch (error) {
+      // If sync fails, try to connect/reconnect
+      try {
+        setSnackbar({ open: true, message: 'Connecting to Google Calendar...', severity: 'info' });
+        
+        // Call backend to get Google OAuth URL
+        const response = await axios.get('/api/auth/google/link', {
+          headers: {
+            Authorization: undefined
+          }
+        });
+        
+        if (response.data?.authUrl) {
+          // Redirect user to Google OAuth consent page
+          window.location.href = response.data.authUrl;
+        } else {
+          setSnackbar({ 
+            open: true, 
+            message: 'Failed to connect to Google Calendar. Please try again.', 
+            severity: 'error' 
+          });
+        }
+      } catch (connectError) {
+        console.error('Google Calendar connection error:', connectError);
         setSnackbar({ 
           open: true, 
-          message: 'Failed to connect to Google Calendar. Please try again.', 
+          message: connectError.response?.data?.message || 'An error occurred. Please try again later.', 
           severity: 'error' 
         });
       }
-    } catch (error) {
-      console.error('Google Calendar connection error:', error);
-      setSnackbar({ 
-        open: true, 
-        message: error.response?.data?.message || 'An error occurred. Please try again later.', 
-        severity: 'error' 
-      });
     }
   };
 
@@ -215,18 +293,52 @@ const Calendar = () => {
   };
 
   // Get events for today
+  // Get events for today
   const todayEvents = events.filter(event => {
-    const today = new Date().toISOString().split('T')[0];
-    return event.date === today;
+    // Parse the date from YYYY-MM-DD format
+    const [year, month, day] = event.date.split('-').map(Number);
+    const eventDate = new Date(year, month - 1, day); // month is 0-indexed
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    eventDate.setHours(0, 0, 0, 0);
+    
+    // Compare timestamps
+    return eventDate.getTime() === today.getTime();
   });
 
-  // Get upcoming events (next 7 days)
+  // Get upcoming events (next 7 days, excluding today)
   const upcomingEvents = events.filter(event => {
-    const eventDate = new Date(event.date);
+    // Parse the date from YYYY-MM-DD format
+    const [year, month, day] = event.date.split('-').map(Number);
+    const eventDate = new Date(year, month - 1, day); // month is 0-indexed
+    
     const today = new Date();
-    const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-    return eventDate >= today && eventDate <= nextWeek;
-  }).sort((a, b) => new Date(a.date) - new Date(b.date));
+    today.setHours(0, 0, 0, 0);
+    
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    
+    eventDate.setHours(0, 0, 0, 0);
+    
+    // Event should be from tomorrow onwards and within next 7 days
+    return eventDate.getTime() >= tomorrow.getTime() && eventDate.getTime() <= nextWeek.getTime();
+  }).sort((a, b) => {
+    const [yearA, monthA, dayA] = a.date.split('-').map(Number);
+    const [yearB, monthB, dayB] = b.date.split('-').map(Number);
+    const dateA = new Date(yearA, monthA - 1, dayA);
+    const dateB = new Date(yearB, monthB - 1, dayB);
+    return dateA - dateB;
+  });
+
+  // Helper function to format date in DD/MM/YYYY format
+  const formatDateIndian = (dateStr) => {
+    const [year, month, day] = dateStr.split('-');
+    return `${day}/${month}/${year}`;
+  };
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -244,8 +356,9 @@ const Calendar = () => {
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
             variant="contained"
-            startIcon={<Google />}
+            startIcon={syncing ? <CircularProgress size={20} color="inherit" /> : <Google />}
             onClick={exportToGoogle}
+            disabled={syncing || loading}
             sx={{ 
               textTransform: 'none',
               background: 'linear-gradient(135deg, #4285F4 0%, #34A853 100%)',
@@ -263,10 +376,13 @@ const Calendar = () => {
               },
               '&:active': {
                 transform: 'translateY(0)',
+              },
+              '&:disabled': {
+                background: 'linear-gradient(135deg, #9E9E9E 0%, #757575 100%)',
               }
             }}
           >
-            Sync Google
+            {syncing ? 'Syncing...' : 'Sync Google'}
           </Button>
           <Button
             variant="contained"
@@ -323,6 +439,30 @@ const Calendar = () => {
         </Box>
       </Box>
 
+      {!user ? (
+        <Card sx={{ mb: 3 }}>
+          <CardContent>
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                Please login to view and manage your calendar events
+              </Typography>
+              <Button 
+                variant="contained" 
+                href="/login"
+                sx={{ mt: 2 }}
+              >
+                Go to Login
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      ) : loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 8 }}>
+          <CircularProgress />
+        </Box>
+      ) : null}
+
+      {user && !loading && (
       <Grid container spacing={3}>
         {/* Today's Events */}
         <Grid item xs={12} md={6}>
@@ -371,6 +511,14 @@ const Calendar = () => {
                         <Box sx={{ flexGrow: 1 }}>
                           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                             {event.title}
+                            {event.googleCalendarEventId && (
+                              <Chip 
+                                label="Synced" 
+                                size="small" 
+                                color="success" 
+                                sx={{ ml: 1, height: 20, fontSize: '0.7rem' }}
+                              />
+                            )}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {event.time} • {event.venue}
@@ -382,10 +530,11 @@ const Calendar = () => {
                           )}
                         </Box>
                         <Box sx={{ display: 'flex', gap: 0.5 }}>
-                          <IconButton size="small" onClick={() => handleEditEvent(event)}>
-                            <Edit />
-                          </IconButton>
-                          <IconButton size="small" onClick={() => handleDeleteEvent(event.id)}>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleDeleteEvent(event.id)}
+                            color="error"
+                          >
                             <Delete />
                           </IconButton>
                         </Box>
@@ -449,19 +598,28 @@ const Calendar = () => {
                         <Box sx={{ flexGrow: 1 }}>
                           <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                             {event.title}
+                            {event.googleCalendarEventId && (
+                              <Chip 
+                                label="Synced" 
+                                size="small" 
+                                color="success" 
+                                sx={{ ml: 1, height: 18, fontSize: '0.65rem' }}
+                              />
+                            )}
                           </Typography>
                           <Typography variant="caption" color="text.secondary" display="block">
-                            {new Date(event.date).toLocaleDateString()} • {event.time}
+                            {formatDateIndian(event.date)} • {event.time}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {event.venue}
                           </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', gap: 0.5 }}>
-                          <IconButton size="small" onClick={() => handleEditEvent(event)}>
-                            <Edit />
-                          </IconButton>
-                          <IconButton size="small" onClick={() => handleDeleteEvent(event.id)}>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleDeleteEvent(event.id)}
+                            color="error"
+                          >
                             <Delete />
                           </IconButton>
                         </Box>
@@ -535,114 +693,10 @@ const Calendar = () => {
           </Card>
         </Grid>
       </Grid>
+      )}
 
-      {/* Floating Action Button */}
-      <Fab
-        color="primary"
-        aria-label="add event"
-        sx={{ position: 'fixed', bottom: 24, right: 24 }}
-        onClick={handleCreateEvent}
-      >
-        <Add />
-      </Fab>
-
-      {/* Event Dialog */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>
-          {editingEvent ? 'Edit Event' : 'Create New Event'}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-            <TextField
-              label="Event Title"
-              value={newEvent.title}
-              onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-              fullWidth
-            />
-            
-            <TextField
-              select
-              label="Type"
-              value={newEvent.type}
-              onChange={(e) => setNewEvent({ ...newEvent, type: e.target.value })}
-              fullWidth
-            >
-              <MenuItem value="sports">Sports Event</MenuItem>
-              <MenuItem value="personal">Personal Event</MenuItem>
-            </TextField>
-
-            {newEvent.type === 'sports' && (
-              <>
-                <TextField
-                  select
-                  label="Sport"
-                  value={newEvent.sport}
-                  onChange={(e) => setNewEvent({ ...newEvent, sport: e.target.value })}
-                  fullWidth
-                >
-                  <MenuItem value="Cricket">Cricket</MenuItem>
-                  <MenuItem value="NBA">Basketball (NBA)</MenuItem>
-                  <MenuItem value="Soccer">Soccer</MenuItem>
-                  <MenuItem value="NFL">Football (NFL)</MenuItem>
-                </TextField>
-                
-                <Box sx={{ display: 'flex', gap: 2 }}>
-                  <TextField
-                    label="Home Team"
-                    value={newEvent.teams?.home || ''}
-                    onChange={(e) => setNewEvent({ 
-                      ...newEvent, 
-                      teams: { ...newEvent.teams, home: e.target.value }
-                    })}
-                    fullWidth
-                  />
-                  <TextField
-                    label="Away Team"
-                    value={newEvent.teams?.away || ''}
-                    onChange={(e) => setNewEvent({ 
-                      ...newEvent, 
-                      teams: { ...newEvent.teams, away: e.target.value }
-                    })}
-                    fullWidth
-                  />
-                </Box>
-              </>
-            )}
-
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                label="Date"
-                type="date"
-                value={newEvent.date}
-                onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
-              <TextField
-                label="Time"
-                type="time"
-                value={newEvent.time}
-                onChange={(e) => setNewEvent({ ...newEvent, time: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-              />
-            </Box>
-
-            <TextField
-              label="Venue"
-              value={newEvent.venue}
-              onChange={(e) => setNewEvent({ ...newEvent, venue: e.target.value })}
-              fullWidth
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
-          <Button onClick={handleSaveEvent} variant="contained">
-            {editingEvent ? 'Update' : 'Create'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Event Dialog - Remove this since we don't allow editing */}
+      {/* Floating Action Button - Removed since events come from sports matches only */}
 
       {/* Snackbar for notifications */}
       <Snackbar 

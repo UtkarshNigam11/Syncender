@@ -296,7 +296,7 @@ function Subscription() {
 
               {subscription?.plan === 'pro' && subscription?.isActive && (
                 <Chip
-                  label={`Active - Expires ${new Date(subscription.expiresAt).toLocaleDateString()}`}
+                  label={`Active - Expires ${new Date(subscription.expiresAt).toLocaleDateString('en-GB')}`}
                   color="success"
                   sx={{ mb: 3, width: '100%' }}
                 />
@@ -304,7 +304,7 @@ function Subscription() {
 
               {subscription?.plan === 'pro' && subscription?.status === 'canceled' && (
                 <Chip
-                  label={`Canceled - Access until ${new Date(subscription.expiresAt).toLocaleDateString()}`}
+                  label={`Canceled - Access until ${new Date(subscription.expiresAt).toLocaleDateString('en-GB')}`}
                   color="warning"
                   sx={{ mb: 3, width: '100%' }}
                 />

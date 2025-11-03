@@ -56,6 +56,8 @@ const eventSchema = new mongoose.Schema({
     appleCalendar: String,
     sportsApi: String
   },
+  // Legacy field for backwards compatibility
+  googleCalendarEventId: String,
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
