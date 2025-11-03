@@ -166,7 +166,7 @@ const Profile = () => {
         <SectionCard title="Subscription" subtitle="Your current plan and benefits.">
           <Stack direction="row" spacing={2} alignItems="center">
             <Chip label={(plan?.plan || 'free').toUpperCase()} color="primary" />
-            <Typography variant="body2" color="text.secondary">Next billing: {plan.planExpiresAt ? new Date(plan.planExpiresAt).toLocaleDateString() : '—'}</Typography>
+            <Typography variant="body2" color="text.secondary">Next billing: {plan.planExpiresAt ? new Date(plan.planExpiresAt).toLocaleDateString('en-GB') : '—'}</Typography>
           </Stack>
           <Alert severity="info" sx={{ mt: 2 }}>Billing and payments are placeholders for now.</Alert>
         </SectionCard>

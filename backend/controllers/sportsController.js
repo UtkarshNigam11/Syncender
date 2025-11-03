@@ -409,14 +409,16 @@ exports.getDashboardData = async (req, res) => {
     
     // Use cricket cache service instead of direct API calls
     const cricketCacheService = require('../services/cricketCacheService');
+    const eventCleanupService = require('../services/eventCleanupService');
     
-    // Fetch all sports data in parallel
-    const [nflData, nbaData, eplData, uclData, cricketData] = await Promise.allSettled([
+    // Fetch all sports data in parallel (including completed matches from last 3 days)
+    const [nflData, nbaData, eplData, uclData, cricketData, completedMatches] = await Promise.allSettled([
       sportsApiService.getLiveScores('nfl'),
       sportsApiService.getLiveScores('nba'),
       sportsApiService.getSoccerLeagueScores('eng.1'),
       sportsApiService.getSoccerLeagueScores('uefa.champions'),
-      cricketCacheService.getMatchesFromCache({ daysAhead: 7, daysBack: 2 })
+      cricketCacheService.getMatchesFromCache({ daysAhead: 7, daysBack: 2 }),
+      eventCleanupService.getRecentCompletedMatches()
     ]);
 
     const now = new Date();
@@ -530,18 +532,49 @@ exports.getDashboardData = async (req, res) => {
     const upcomingGames = allMatches
       .filter(m => m.isUpcoming)
       .sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // Get finished/completed matches from API data (isFinal = true)
+    const finishedGames = allMatches
+      .filter(m => m.isFinal && !m.isLive)
+      .sort((a, b) => new Date(b.date) - new Date(a.date)); // Newest first
+    
+    // Also include completed matches from database (last 3 days) for events user added
+    if (completedMatches.status === 'fulfilled' && completedMatches.value?.length) {
+      completedMatches.value.forEach((event) => {
+        finishedGames.push({
+          id: event._id || `completed-${event.title}`,
+          sport: event.sport || 'Unknown',
+          homeTeam: event.teams?.home || event.title?.split('vs')[0]?.trim() || 'Team 1',
+          awayTeam: event.teams?.away || event.title?.split('vs')[1]?.trim() || 'Team 2',
+          homeScore: '-',
+          awayScore: '-',
+          status: 'Final',
+          venue: event.location || 'TBD',
+          date: event.startTime,
+          league: event.sport || 'General',
+          isLive: false,
+          isUpcoming: false,
+          isFinal: true,
+          isCompleted: true
+        });
+      });
+    }
+    
+    const completedGames = finishedGames;
 
-    console.log(`✅ Dashboard data: ${liveGames.length} live, ${upcomingGames.length} upcoming`);
+    console.log(`✅ Dashboard data: ${liveGames.length} live, ${upcomingGames.length} upcoming, ${completedGames.length} completed`);
 
     res.json({
       success: true,
       data: {
         liveGames,
         upcomingGames,
-        totalGames: allMatches.length,
+        completedGames,
+        totalGames: allMatches.length + completedGames.length,
         stats: {
           liveCount: liveGames.length,
           upcomingCount: upcomingGames.length,
+          completedCount: completedGames.length,
           sportsTracked: 4, // NFL, NBA, Soccer, Cricket
           timestamp: new Date().toISOString()
         }
@@ -556,6 +589,7 @@ exports.getDashboardData = async (req, res) => {
       data: {
         liveGames: [],
         upcomingGames: [],
+        completedGames: [],
         totalGames: 0
       }
     });

@@ -141,3 +141,81 @@ exports.testGoogleCalendarConnection = async (user) => {
     primary: cal.primary
   }));
 };
+
+/**
+ * Get events from Google Calendar that were created by our app
+ * @param {Object} user - User object with Google Calendar tokens
+ * @param {Date} timeMin - Minimum time for events (optional)
+ * @param {Date} timeMax - Maximum time for events (optional)
+ * @returns {Array} - Array of Google Calendar events
+ */
+exports.listGoogleCalendarEvents = async (user, timeMin, timeMax) => {
+  if (!user.googleCalendarToken || !user.googleCalendarToken.accessToken) {
+    throw new Error('User has not connected Google Calendar');
+  }
+
+  try {
+    const oauth2Client = createOAuthClient(
+      user.googleCalendarToken.accessToken,
+      user.googleCalendarToken.refreshToken
+    );
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+    const params = {
+      calendarId: 'primary',
+      singleEvents: true,
+      orderBy: 'startTime',
+    };
+
+    if (timeMin) {
+      params.timeMin = timeMin.toISOString();
+    }
+    if (timeMax) {
+      params.timeMax = timeMax.toISOString();
+    }
+
+    const response = await calendar.events.list(params);
+
+    return response.data.items || [];
+  } catch (error) {
+    if (error.code === 401) {
+      throw new Error('Google Calendar authorization expired. Please reconnect your Google account.');
+    }
+    throw new Error(`Failed to list Google Calendar events: ${error.message}`);
+  }
+};
+
+/**
+ * Get a specific Google Calendar event by ID
+ * @param {Object} user - User object with Google Calendar tokens
+ * @param {string} googleEventId - Google Calendar event ID
+ * @returns {Object} - Google Calendar event or null if not found
+ */
+exports.getGoogleCalendarEvent = async (user, googleEventId) => {
+  if (!user.googleCalendarToken || !user.googleCalendarToken.accessToken) {
+    throw new Error('User has not connected Google Calendar');
+  }
+
+  try {
+    const oauth2Client = createOAuthClient(
+      user.googleCalendarToken.accessToken,
+      user.googleCalendarToken.refreshToken
+    );
+    const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+
+    const response = await calendar.events.get({
+      calendarId: 'primary',
+      eventId: googleEventId,
+    });
+
+    return response.data;
+  } catch (error) {
+    if (error.code === 404) {
+      return null; // Event deleted from Google Calendar
+    }
+    if (error.code === 401) {
+      throw new Error('Google Calendar authorization expired. Please reconnect your Google account.');
+    }
+    throw new Error(`Failed to get Google Calendar event: ${error.message}`);
+  }
+};
