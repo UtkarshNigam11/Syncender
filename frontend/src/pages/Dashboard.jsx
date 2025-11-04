@@ -821,7 +821,7 @@ const Dashboard = () => {
                             {game.awayTeam} vs {game.homeTeam}
                           </Typography>
                           <Typography variant="caption" color="text.secondary" display="block">
-                            {game.date ? new Date(game.date).toLocaleDateString('en-GB') : 'TBD'}
+                            {game.date ? `${new Date(game.date).toLocaleDateString('en-GB')} • ${new Date(game.date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}` : 'TBD'}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {game.venue || 'Venue TBD'}
