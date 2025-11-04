@@ -529,6 +529,7 @@ exports.getDashboardData = async (req, res) => {
 
     // Filter and sort
     const liveGames = allMatches.filter(m => m.isLive);
+    console.log(`🎯 Filtered results: ${liveGames.length} live games (${liveGames.filter(g => g.sport === 'Cricket').length} cricket)`);
     const upcomingGames = allMatches
       .filter(m => m.isUpcoming)
       .sort((a, b) => new Date(a.date) - new Date(b.date));

@@ -118,6 +118,7 @@ cricketMatchSchema.statics.getUpcomingMatches = function(daysAhead = 7) {
   
   return this.find({
     dateTimeGMT: { $gte: now, $lte: future },
+    matchStarted: false, // Exclude live matches
     matchEnded: false
   })
   .sort({ dateTimeGMT: 1 })

@@ -283,31 +283,30 @@ exports.getMatchesFromCache = async (options = {}) => {
       results.recent = await CricketMatch.getRecentMatches(daysBack);
     }
 
-    // Combine all matches
-    const allMatches = [
-      ...results.live,
-      ...results.upcoming,
-      ...results.recent
-    ];
-
-    // Remove score data (as requested by user)
-    const matchesWithoutScores = allMatches.map(match => {
+    // Remove score data from each array separately (as requested by user)
+    const removeScores = (matches) => matches.map(match => {
       const matchObj = match.toObject();
       delete matchObj.score; // Remove live scores
       return matchObj;
     });
 
+    const liveWithoutScores = removeScores(results.live);
+    const upcomingWithoutScores = removeScores(results.upcoming);
+    const recentWithoutScores = removeScores(results.recent);
+
     return {
       success: true,
-      matches: matchesWithoutScores,
+      live: liveWithoutScores,
+      upcoming: upcomingWithoutScores,
+      recent: recentWithoutScores,
       stats: {
-        live: results.live.length,
-        upcoming: results.upcoming.length,
-        recent: results.recent.length,
-        total: matchesWithoutScores.length
+        live: liveWithoutScores.length,
+        upcoming: upcomingWithoutScores.length,
+        recent: recentWithoutScores.length,
+        total: liveWithoutScores.length + upcomingWithoutScores.length + recentWithoutScores.length
       },
       source: 'database_cache',
-      lastUpdated: allMatches[0]?.lastFetched || new Date()
+      lastUpdated: results.live[0]?.lastFetched || results.upcoming[0]?.lastFetched || new Date()
     };
   } catch (error) {
     console.error('Error getting matches from cache:', error);
