@@ -15,6 +15,14 @@ router.get('/dashboard', sportsController.getDashboardData);
 router.get('/scores/:sport', sportsController.getLiveScores);
 // League-specific soccer scores (e.g., /scores/soccer/eng.1, /scores/soccer/uefa.champions)
 router.get('/scores/soccer/:league', sportsController.getSoccerLeagueScores);
+
+// Specific team fetching routes (MUST come before generic route)
+router.get('/teams/soccer', sportsController.getSoccerTeams); // Query param: ?league=eng.1
+router.get('/teams/cricket', sportsController.getCricketTeams); // Query param: ?league=ipl
+router.get('/teams/nfl', sportsController.getNFLTeams);
+router.get('/teams/nba', sportsController.getNBATeams);
+
+// Generic teams route (catches all other sports)
 router.get('/teams/:sport', sportsController.getTeams);
 router.get('/standings/:sport', sportsController.getStandings);
 

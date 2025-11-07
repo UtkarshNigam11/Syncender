@@ -27,7 +27,8 @@ const protect = async (req, res, next) => {
 
       // Add user to request object
       req.user = {
-        userId: user._id,
+        id: user._id,
+        userId: user._id,  // Keep for backward compatibility
         email: user.email
       };
       
