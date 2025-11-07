@@ -274,8 +274,8 @@ const Settings = () => {
               action={sub?.plan !== 'pro' && <Button onClick={upgrade} variant="contained">Upgrade to Pro</Button>}
             >
               <Stack direction="row" spacing={1} flexWrap="wrap">
-                {(me?.preferences?.favoriteTeams || []).map(t => (
-                  <Chip key={t} label={t} />
+                {(me?.preferences?.favoriteTeams || []).map((t, index) => (
+                  <Chip key={t?.teamId || index} label={t?.name || t} />
                 ))}
                 {used === 0 && <Typography variant="body2" color="text.secondary">No teams added yet. Go to Dashboard to add.</Typography>}
               </Stack>

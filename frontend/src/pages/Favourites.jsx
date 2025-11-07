@@ -381,15 +381,109 @@ const Favourites = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="lg" sx={{ py: 4 }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 1 }}>
-          ⭐ My Favourites
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Select your favourite teams and leagues to auto-sync matches to your calendar
-        </Typography>
+      <Box 
+        sx={{ 
+          mb: 4, 
+          p: 5,
+          borderRadius: 4,
+          background: (theme) => theme.palette.mode === 'dark'
+            ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+            : 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: '0 20px 60px -10px rgba(168, 237, 234, 0.4)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+        }}
+      >
+        {/* Decorative circles */}
+        <Box
+          sx={{
+            position: 'absolute',
+            width: '350px',
+            height: '350px',
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.15)',
+            top: '-150px',
+            right: '-50px',
+            backdropFilter: 'blur(40px)',
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            width: '250px',
+            height: '250px',
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.12)',
+            bottom: '-100px',
+            left: '20%',
+            backdropFilter: 'blur(40px)',
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            width: '150px',
+            height: '150px',
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.1)',
+            top: '50%',
+            right: '15%',
+            backdropFilter: 'blur(40px)',
+          }}
+        />
+
+        <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 80,
+              height: 80,
+              borderRadius: 3,
+              background: 'rgba(255, 255, 255, 0.25)',
+              backdropFilter: 'blur(10px)',
+              border: '2px solid rgba(255, 255, 255, 0.4)',
+              boxShadow: '0 8px 32px rgba(255, 255, 255, 0.2)',
+            }}
+          >
+            <Star 
+              sx={{ 
+                fontSize: 48, 
+                color: 'white',
+                filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.2))',
+              }} 
+            />
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <Typography 
+              variant="h3" 
+              sx={{ 
+                fontWeight: 900, 
+                mb: 1,
+                color: 'white',
+                letterSpacing: '-0.5px',
+                textShadow: '0 2px 20px rgba(0,0,0,0.3)',
+              }}
+            >
+              My Favourites
+            </Typography>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                color: 'rgba(255, 255, 255, 0.95)',
+                fontWeight: 400,
+                letterSpacing: '0.2px',
+                textShadow: '0 1px 10px rgba(0,0,0,0.2)',
+              }}
+            >
+              Select your favourite teams and leagues to auto-sync matches to your calendar
+            </Typography>
+          </Box>
+        </Box>
       </Box>
 
       {/* Tabs */}

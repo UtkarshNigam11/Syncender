@@ -36,6 +36,7 @@ import {
   Google,
   Apple,
   Download,
+  CalendarMonth,
 } from '@mui/icons-material';
 
 const Calendar = () => {
@@ -347,17 +348,91 @@ const Calendar = () => {
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Header */}
-      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Box>
-          <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-            My Calendar 📅
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Manage your sports events and personal schedule
-          </Typography>
+      <Box sx={{ mb: 4 }}>
+        <Box 
+          sx={{ 
+            p: 5,
+            borderRadius: 4,
+            background: (theme) => theme.palette.mode === 'dark'
+              ? 'linear-gradient(135deg, #134e5e 0%, #71b280 100%)'
+              : 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+            position: 'relative',
+            overflow: 'hidden',
+            boxShadow: '0 20px 60px -10px rgba(79, 172, 254, 0.5)',
+            mb: 3,
+          }}
+        >
+          {/* Decorative circles */}
+          <Box
+            sx={{
+              position: 'absolute',
+              width: '400px',
+              height: '400px',
+              borderRadius: '50%',
+              background: 'rgba(255, 255, 255, 0.1)',
+              top: '-200px',
+              left: '50%',
+              backdropFilter: 'blur(20px)',
+            }}
+          />
+          <Box
+            sx={{
+              position: 'absolute',
+              width: '180px',
+              height: '180px',
+              borderRadius: '50%',
+              background: 'rgba(255, 255, 255, 0.08)',
+              bottom: '-60px',
+              left: '10%',
+              backdropFilter: 'blur(20px)',
+            }}
+          />
+
+          <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 3 }}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 80,
+                height: 80,
+                borderRadius: 3,
+                background: 'rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(10px)',
+                border: '2px solid rgba(255, 255, 255, 0.3)',
+              }}
+            >
+              <CalendarMonth sx={{ fontSize: 48, color: 'white' }} />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography 
+                variant="h3" 
+                sx={{ 
+                  fontWeight: 900, 
+                  mb: 1,
+                  color: 'white',
+                  letterSpacing: '-0.5px',
+                  textShadow: '0 2px 20px rgba(0,0,0,0.2)',
+                }}
+              >
+                My Calendar
+              </Typography>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  color: 'rgba(255, 255, 255, 0.95)',
+                  fontWeight: 400,
+                  letterSpacing: '0.2px',
+                }}
+              >
+                Manage your sports events and personal schedule
+              </Typography>
+            </Box>
+          </Box>
         </Box>
-        
-        <Box sx={{ display: 'flex', gap: 2 }}>
+
+        {/* Action Buttons */}
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
           <Button
             variant="contained"
             startIcon={syncing ? <CircularProgress size={20} color="inherit" /> : <Google />}

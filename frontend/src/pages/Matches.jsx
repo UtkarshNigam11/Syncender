@@ -36,6 +36,7 @@ import {
   StarBorder,
   Check,
   Refresh,
+  Stadium,
 } from '@mui/icons-material';
 
 const Matches = () => {
@@ -522,13 +523,86 @@ const Matches = () => {
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-          Matches 🏟️
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Follow live games, upcoming matches, and results
-        </Typography>
+      <Box 
+        sx={{ 
+          mb: 4, 
+          p: 5,
+          borderRadius: 4,
+          background: (theme) => theme.palette.mode === 'dark'
+            ? 'linear-gradient(135deg, #c21500 0%, #ffc500 100%)'
+            : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: '0 20px 60px -10px rgba(240, 147, 251, 0.5)',
+        }}
+      >
+        {/* Decorative circles */}
+        <Box
+          sx={{
+            position: 'absolute',
+            width: '350px',
+            height: '350px',
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.1)',
+            top: '-150px',
+            right: '100px',
+            backdropFilter: 'blur(20px)',
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            width: '250px',
+            height: '250px',
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.08)',
+            bottom: '-80px',
+            right: '-50px',
+            backdropFilter: 'blur(20px)',
+          }}
+        />
+
+        <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 80,
+              height: 80,
+              borderRadius: 3,
+              background: 'rgba(255, 255, 255, 0.2)',
+              backdropFilter: 'blur(10px)',
+              border: '2px solid rgba(255, 255, 255, 0.3)',
+            }}
+          >
+            <Stadium sx={{ fontSize: 48, color: 'white' }} />
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <Typography 
+              variant="h3" 
+              sx={{ 
+                fontWeight: 900, 
+                mb: 1,
+                color: 'white',
+                letterSpacing: '-0.5px',
+                textShadow: '0 2px 20px rgba(0,0,0,0.2)',
+              }}
+            >
+              Matches
+            </Typography>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                color: 'rgba(255, 255, 255, 0.95)',
+                fontWeight: 400,
+                letterSpacing: '0.2px',
+              }}
+            >
+              Follow live games, upcoming matches, and results
+            </Typography>
+          </Box>
+        </Box>
       </Box>
 
       {/* Search and Tabs */}
