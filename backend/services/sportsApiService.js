@@ -9,25 +9,13 @@ const ESPN_APIS = {
   soccer: 'http://site.api.espn.com/apis/site/v2/sports/soccer'
 };
 
-// Sports that use SportsDB API instead of ESPN
-const SPORTSDB_SPORTS = ['cricket', 'tennis', 'rugby', 'formula1'];
-
-// The Sports DB API base URL
-const SPORTS_DB_API = 'https://www.thesportsdb.com/api/v1/json';
-const SPORTS_DB_KEY = process.env.SPORTS_DB_API_KEY || '3'; // Free tier uses '3'
-
 /**
  * Get live scores for a specific sport
- * @param {string} sport - Sport type (nfl, nba, mlb, nhl, soccer, cricket, tennis)
+ * @param {string} sport - Sport type (nfl, nba, mlb, nhl, soccer)
  * @returns {Object} - Live scores data
  */
 exports.getLiveScores = async (sport) => {
   try {
-    // Handle SportsDB sports (cricket, tennis, etc.)
-    if (SPORTSDB_SPORTS.includes(sport)) {
-      return await getCricketScoresFromSportsDB(sport);
-    }
-    
     // Handle ESPN sports
     if (!ESPN_APIS[sport]) {
       throw new Error(`Unsupported sport: ${sport}`);
@@ -186,12 +174,6 @@ exports.getSoccerLeagueTeams = async (league) => {
  */
 exports.getTeams = async (sport, options = {}) => {
   try {
-    // Handle SportsDB sports (cricket, tennis, etc.)
-    if (SPORTSDB_SPORTS.includes(sport)) {
-      const { league } = options;
-      return await getTeamsFromSportsDB(sport, league);
-    }
-    
     // Handle ESPN sports
     if (!ESPN_APIS[sport]) {
       throw new Error(`Unsupported sport: ${sport}`);
@@ -245,11 +227,6 @@ exports.getTeams = async (sport, options = {}) => {
  */
 exports.getStandings = async (sport) => {
   try {
-    // Handle SportsDB sports (cricket, tennis, etc.)
-    if (SPORTSDB_SPORTS.includes(sport)) {
-      return await getStandingsFromSportsDB(sport);
-    }
-    
     // Handle ESPN sports
     if (!ESPN_APIS[sport]) {
       throw new Error(`Unsupported sport: ${sport}`);
@@ -269,19 +246,18 @@ exports.getStandings = async (sport) => {
 };
 
 /**
- * Get detailed team information from SportsDB
+ * Get detailed team information
  * @param {string} teamName - Team name to search
  * @returns {Object} - Team details
  */
 exports.getTeamDetails = async (teamName) => {
   try {
-    const response = await axios.get(
-      `${SPORTS_DB_API}/${SPORTS_DB_KEY}/searchteams.php?t=${encodeURIComponent(teamName)}`
-    );
+    // For now, return basic team search - can be enhanced with ESPN team lookup
     return {
       success: true,
-      data: response.data.teams || [],
-      searchTerm: teamName
+      data: [],
+      searchTerm: teamName,
+      message: 'Team details feature coming soon'
     };
   } catch (error) {
     console.error('Error fetching team details:', error.message);
@@ -290,15 +266,21 @@ exports.getTeamDetails = async (teamName) => {
 };
 
 /**
- * Get leagues from SportsDB
+ * Get all available leagues
  * @returns {Object} - All available leagues
  */
 exports.getAllLeagues = async () => {
   try {
-    const response = await axios.get(`${SPORTS_DB_API}/${SPORTS_DB_KEY}/all_leagues.php`);
+    // Return supported ESPN leagues
     return {
       success: true,
-      data: response.data.leagues || []
+      data: [
+        { id: 'nfl', name: 'NFL', provider: 'ESPN' },
+        { id: 'nba', name: 'NBA', provider: 'ESPN' },
+        { id: 'eng.1', name: 'Premier League', provider: 'ESPN' },
+        { id: 'uefa.champions', name: 'UEFA Champions League', provider: 'ESPN' },
+        { id: 'cricket', name: 'Cricket', provider: 'CricAPI' }
+      ]
     };
   } catch (error) {
     console.error('Error fetching leagues:', error.message);
@@ -308,14 +290,19 @@ exports.getAllLeagues = async () => {
 
 /**
  * Get fixtures for a league
- * @param {string} leagueId - League ID from SportsDB
+ * @param {string} leagueId - League ID
  * @returns {Object} - League fixtures
  */
 exports.getLeagueFixtures = async (leagueId) => {
   try {
-    const response = await axios.get(
-      `${SPORTS_DB_API}/${SPORTS_DB_KEY}/eventsnextleague.php?id=${leagueId}`
-    );
+    // Use appropriate API based on league
+    if (leagueId === 'cricket') {
+      const cricketService = require('./cricketApiService');
+      return await cricketService.getCricketMatches();
+    }
+    
+    // For ESPN leagues
+    const response = await axios.get(`${ESPN_APIS[leagueId]}/scoreboard`);
     return {
       success: true,
       data: response.data.events || [],
@@ -334,13 +321,12 @@ exports.getLeagueFixtures = async (leagueId) => {
  */
 exports.searchPlayer = async (playerName) => {
   try {
-    const response = await axios.get(
-      `${SPORTS_DB_API}/${SPORTS_DB_KEY}/searchplayers.php?p=${encodeURIComponent(playerName)}`
-    );
+    // Player search feature coming soon
     return {
       success: true,
-      data: response.data.player || [],
-      searchTerm: playerName
+      data: [],
+      searchTerm: playerName,
+      message: 'Player search feature coming soon'
     };
   } catch (error) {
     console.error('Error searching player:', error.message);
@@ -377,127 +363,7 @@ exports.getSupportedSports = () => {
       { id: 'mlb', name: 'MLB (Baseball)', provider: 'ESPN' },
       { id: 'nhl', name: 'NHL (Hockey)', provider: 'ESPN' },
       { id: 'soccer', name: 'Soccer/Football', provider: 'ESPN' },
-      { id: 'cricket', name: 'Cricket', provider: 'SportsDB' },
-      { id: 'tennis', name: 'Tennis', provider: 'SportsDB' },
-      { id: 'rugby', name: 'Rugby', provider: 'SportsDB' },
-      { id: 'formula1', name: 'Formula 1', provider: 'SportsDB' }
+      { id: 'cricket', name: 'Cricket', provider: 'CricAPI' }
     ]
   };
 };
-
-/**
- * Helper function to get cricket/tennis scores from SportsDB
- * @param {string} sport - Sport type
- * @returns {Object} - Live events data
- */
-async function getCricketScoresFromSportsDB(sport) {
-  try {
-    // Get recent events for cricket (or other sport)
-    const sportMap = {
-      cricket: 'Cricket',
-      tennis: 'Tennis',
-      rugby: 'Rugby',
-      formula1: 'Motor Sport'
-    };
-    
-    const sportName = sportMap[sport] || 'Cricket';
-    
-    // Get events from the last 7 days and next 7 days
-    const response = await axios.get(
-      `${SPORTS_DB_API}/${SPORTS_DB_KEY}/eventsround.php?id=4328&r=15&s=2024-2025`
-    );
-    
-    return {
-      success: true,
-      data: response.data.events || [],
-      sport: sport.toUpperCase(),
-      provider: 'SportsDB',
-      message: `Recent and upcoming ${sportName} events`
-    };
-  } catch (error) {
-    console.error(`Error fetching ${sport} events:`, error.message);
-    throw new Error(`Failed to fetch ${sport} events`);
-  }
-}
-
-/**
- * Helper function to get teams from SportsDB for cricket/tennis
- * @param {string} sport - Sport type
- * @param {string} league - Optional league ID
- * @returns {Object} - Teams data
- */
-async function getTeamsFromSportsDB(sport, league) {
-  try {
-    // For cricket, get teams from specific league if provided
-    const leagueMap = {
-      cricket: '4344', // IPL league ID (default)
-      tennis: '4366', // ATP tour
-      rugby: '4393', // Rugby World Cup
-      formula1: '4370' // Formula 1
-    };
-    
-    const leagueId = league || leagueMap[sport] || '4344';
-    
-    const response = await axios.get(
-      `${SPORTS_DB_API}/${SPORTS_DB_KEY}/lookup_all_teams.php?id=${leagueId}`
-    );
-    
-    const rawTeams = response.data.teams || [];
-    const teams = rawTeams.map(t => ({
-      id: t.idTeam,
-      name: t.strTeam,
-      shortName: t.strTeamShort || t.strTeam,
-      logo: t.strTeamBadge || t.strTeamLogo || '',
-      strTeamBadge: t.strTeamBadge,
-      strStadium: t.strStadium,
-      strCountry: t.strCountry,
-      strLeague: t.strLeague,
-      idTeam: t.idTeam,
-      strTeam: t.strTeam,
-    }));
-    
-    return {
-      success: true,
-      data: teams,
-      sport: sport.toUpperCase(),
-      provider: 'SportsDB',
-      leagueId
-    };
-  } catch (error) {
-    console.error(`Error fetching ${sport} teams:`, error.message);
-    throw new Error(`Failed to fetch ${sport} teams`);
-  }
-}
-
-/**
- * Helper function to get standings from SportsDB
- * @param {string} sport - Sport type
- * @returns {Object} - Standings data
- */
-async function getStandingsFromSportsDB(sport) {
-  try {
-    // For cricket, get IPL table as an example
-    const leagueMap = {
-      cricket: '4344', // IPL league ID
-      tennis: '4366', // ATP rankings
-      rugby: '4393', // Rugby standings
-      formula1: '4370' // F1 standings
-    };
-    
-    const leagueId = leagueMap[sport] || '4344';
-    
-    const response = await axios.get(
-      `${SPORTS_DB_API}/${SPORTS_DB_KEY}/lookuptable.php?l=${leagueId}&s=2024-2025`
-    );
-    
-    return {
-      success: true,
-      data: response.data.table || [],
-      sport: sport.toUpperCase(),
-      provider: 'SportsDB'
-    };
-  } catch (error) {
-    console.error(`Error fetching ${sport} standings:`, error.message);
-    throw new Error(`Failed to fetch ${sport} standings`);
-  }
-}

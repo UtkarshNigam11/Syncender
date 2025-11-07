@@ -21,23 +21,30 @@ import {
   SportsSoccer,
   SportsBasketball,
   SportsFootball,
-  SportsHockey as Cricket,
+  SportsCricket,
   Schedule,
   Add,
   MoreVert,
   EventAvailable,
   Groups,
+  Refresh,
 } from '@mui/icons-material';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [liveGames, setLiveGames] = useState([]);
   const [upcomingGames, setUpcomingGames] = useState([]);
+  const [completedGames, setCompletedGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [userStats, setUserStats] = useState({ favoriteTeams: 0, planLimit: 2 });
+  const [userStats, setUserStats] = useState({ 
+    favoriteTeams: 0, 
+    planLimit: 2, 
+    eventsCount: 0,
+    sportsAvailable: 6 
+  });
   const [calendarStatus, setCalendarStatus] = useState({}); // Track calendar add status for each game
-  const hasFetchedData = useRef(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Fetch user's existing calendar events to check which matches are already added
   const fetchUserEvents = async () => {
@@ -52,35 +59,28 @@ const Dashboard = () => {
       });
 
       if (response.data.success) {
-        // Mark events as added based on multiple matching criteria
+        const events = response.data.events || [];
+        
+        // Create status map from backend event IDs
         const statusUpdates = {};
-        response.data.events.forEach(event => {
-          // Extract team names from event
-          const homeTeam = event.teams?.home || event.title?.split('vs')?.[1]?.trim() || '';
-          const awayTeam = event.teams?.away || event.title?.split('vs')?.[0]?.trim() || '';
-          
-          if (homeTeam && awayTeam) {
-            // Normalize: lowercase, remove special chars
-            const normalizeTeam = (team) => team.toLowerCase().replace(/[^a-z0-9]/g, '');
-            const homeNorm = normalizeTeam(homeTeam);
-            const awayNorm = normalizeTeam(awayTeam);
-            
-            // Create IDs in both team orders
-            const id1 = `${awayNorm}-${homeNorm}`;
-            const id2 = `${homeNorm}-${awayNorm}`;
-            statusUpdates[id1] = 'added';
-            statusUpdates[id2] = 'added';
+        events.forEach(event => {
+          // Use the event's external IDs if available (already normalized in backend)
+          if (event.externalIds?.matchId) {
+            statusUpdates[event.externalIds.matchId] = 'added';
           }
           
-          // Also add title-based ID as fallback
-          if (event.title) {
-            const titleId = event.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-            statusUpdates[titleId] = 'added';
+          // Fallback: create simple identifier from teams
+          if (event.teams?.home && event.teams?.away) {
+            const simpleId = `${event.teams.away}-${event.teams.home}`.toLowerCase().replace(/\s+/g, '');
+            statusUpdates[simpleId] = 'added';
           }
         });
-        console.log('Dashboard: Loaded', response.data.events.length, 'events from calendar');
-        console.log('Dashboard: Created', Object.keys(statusUpdates).length, 'match identifiers');
+        
+        console.log('Dashboard: Loaded', events.length, 'events from calendar');
         setCalendarStatus(statusUpdates);
+        
+        // Update user stats with actual event count
+        setUserStats(prev => ({ ...prev, eventsCount: events.length }));
       }
     } catch (error) {
       console.error('Error fetching user events:', error);
@@ -89,11 +89,8 @@ const Dashboard = () => {
 
   // Function to add match to calendar
   const addToCalendar = async (game) => {
-    // Normalize team names for consistent matching
-    const normalizeTeam = (team) => team.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const homeNorm = normalizeTeam(game.homeTeam);
-    const awayNorm = normalizeTeam(game.awayTeam);
-    const gameId = `${awayNorm}-${homeNorm}`;
+    // Create simple match identifier
+    const gameId = `${game.awayTeam}-${game.homeTeam}`.toLowerCase().replace(/\s+/g, '');
     
     setCalendarStatus(prev => ({ ...prev, [gameId]: 'loading' }));
     
@@ -111,6 +108,9 @@ const Dashboard = () => {
         teams: {
           home: game.homeTeam,
           away: game.awayTeam
+        },
+        externalIds: {
+          matchId: game.id // Store the backend-generated unique ID
         }
       };
 
@@ -127,25 +127,22 @@ const Dashboard = () => {
         }
       });
       
-      // Check if event already exists
       if (response.data.alreadyExists) {
         console.log('Event already exists in calendar');
-        setCalendarStatus(prev => ({ ...prev, [gameId]: 'added' }));
-        return;
+      } else {
+        console.log('Event added successfully');
       }
       
-      console.log('Event added successfully, refreshing event list...');
-      // Set status to added immediately
       setCalendarStatus(prev => ({ ...prev, [gameId]: 'added' }));
-      // Also refresh the user events list to update all button states
-      await fetchUserEvents();
+      await fetchUserEvents(); // Refresh event list
+      
     } catch (error) {
       console.error('Error adding to calendar:', error);
       setCalendarStatus(prev => ({ ...prev, [gameId]: 'failed' }));
       
-      if (error.response && error.response.status === 401) {
+      if (error.response?.status === 401) {
         navigate('/login');
-      } else if (error.response && error.response.data.message && error.response.data.message.includes('Google')) {
+      } else if (error.response?.data?.message?.includes('Google')) {
         navigate('/profile');
       }
     }
@@ -153,11 +150,6 @@ const Dashboard = () => {
 
   // Fetch real sports data
   useEffect(() => {
-    // Clear cache to fetch fresh data (temporary - for debugging)
-    localStorage.removeItem('dashboard_liveGames');
-    localStorage.removeItem('dashboard_upcomingGames');
-    sessionStorage.removeItem('dashboard_spa_nav');
-    
     // Fetch user stats for favorite teams
     const fetchUserStats = async () => {
       try {
@@ -174,7 +166,11 @@ const Dashboard = () => {
           
           const favoriteTeamsCount = userRes.data?.preferences?.favoriteTeams?.length || 0;
           const planLimit = subRes.data?.limits?.favoriteTeams || 2;
-          setUserStats({ favoriteTeams: favoriteTeamsCount, planLimit });
+          setUserStats(prev => ({ 
+            ...prev, 
+            favoriteTeams: favoriteTeamsCount, 
+            planLimit 
+          }));
         }
       } catch (err) {
         console.error('Error fetching user stats:', err);
@@ -185,45 +181,53 @@ const Dashboard = () => {
     fetchUserEvents();
     
     // Fetch dashboard data from unified backend endpoint
-    const fetchSportsData = async () => {
+    const fetchSportsData = async (refreshLiveOnly = false) => {
       try {
-        setLoading(true);
+        if (refreshLiveOnly) {
+          setRefreshing(true);
+        } else {
+          setLoading(true);
+        }
         
-        // Use new unified dashboard endpoint
-        const response = await axios.get('http://localhost:5000/api/sports/dashboard');
+        // Add query param based on refresh type
+        const url = refreshLiveOnly
+          ? 'http://localhost:5000/api/sports/dashboard?refreshLive=true'
+          : 'http://localhost:5000/api/sports/dashboard';
+        
+        const response = await axios.get(url);
         
         if (response.data.success) {
-          const { liveGames, upcomingGames } = response.data.data;
+          const { liveGames, upcomingGames, completedGames } = response.data.data;
           
           setLiveGames(liveGames);
           setUpcomingGames(upcomingGames);
+          setCompletedGames(completedGames || []);
           setError('');
           
-          // Cache the data
-          localStorage.setItem('dashboard_liveGames', JSON.stringify(liveGames));
-          localStorage.setItem('dashboard_upcomingGames', JSON.stringify(upcomingGames));
-          sessionStorage.setItem('dashboard_spa_nav', 'true');
-          
-          console.log(`✅ Dashboard loaded: ${liveGames.length} live, ${upcomingGames.length} upcoming`);
+          console.log(`✅ Dashboard loaded: ${liveGames.length} live, ${upcomingGames.length} upcoming, ${completedGames?.length || 0} completed`);
         }
       } catch (error) {
         console.error('Error fetching sports data:', error);
         setError('Unable to load live sports data. Please check if the backend server is running.');
         setLiveGames([]);
         setUpcomingGames([]);
+        setCompletedGames([]);
       } finally {
         setLoading(false);
+        setRefreshing(false);
       }
     };
 
     fetchSportsData();
-    hasFetchedData.current = true;
+    
+    // Expose refresh function for button
+    window.dashboardRefreshLive = () => fetchSportsData(true);
   }, []);
 
   // Helper functions for sport icons and colors
   const getSportIcon = (sport) => {
     const icons = {
-      Cricket: <Cricket />,
+      Cricket: <SportsCricket />,
       NBA: <SportsBasketball />,
       Soccer: <SportsSoccer />,
       NFL: <SportsFootball />,
@@ -244,11 +248,11 @@ const Dashboard = () => {
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h3" sx={{ fontWeight: 700, mb: 1 }}>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
           Sports Dashboard
         </Typography>
-        <Typography variant="body1" color="text.secondary">
+        <Typography variant="body2" color="text.secondary">
           Track ongoing matches, upcoming fixtures, and manage your sports calendar
         </Typography>
       </Box>
@@ -465,7 +469,7 @@ const Dashboard = () => {
                     </Box>
                   </Box>
                   <Typography variant="h2" sx={{ fontWeight: 800, mb: 0.5, fontSize: '2.5rem', textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
-                    6
+                    {userStats.sportsAvailable}
                   </Typography>
                   <Typography variant="body2" sx={{ opacity: 0.95, fontWeight: 500, fontSize: '0.875rem' }}>
                     Sports Available
@@ -523,7 +527,7 @@ const Dashboard = () => {
                     </Box>
                   </Box>
                   <Typography variant="h2" sx={{ fontWeight: 800, mb: 0.5, fontSize: '2.5rem', textShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
-                    24
+                    {userStats.eventsCount}
                   </Typography>
                   <Typography variant="body2" sx={{ opacity: 0.95, fontWeight: 500, fontSize: '0.875rem' }}>
                     Events Synced
@@ -600,9 +604,31 @@ const Dashboard = () => {
           <Card sx={{ height: '100%' }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                  Ongoing Matches 
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
+                    Ongoing Matches 
+                  </Typography>
+                  <IconButton
+                    onClick={() => window.dashboardRefreshLive?.()}
+                    disabled={refreshing}
+                    size="small"
+                    sx={{
+                      bgcolor: refreshing ? 'action.disabledBackground' : 'primary.main',
+                      color: 'white',
+                      width: 32,
+                      height: 32,
+                      '&:hover': { bgcolor: 'primary.dark' },
+                      '&:disabled': { bgcolor: 'action.disabledBackground' }
+                    }}
+                    title="Refresh live matches"
+                  >
+                    {refreshing ? (
+                      <CircularProgress size={18} sx={{ color: 'white' }} />
+                    ) : (
+                      <Refresh sx={{ fontSize: 18 }} />
+                    )}
+                  </IconButton>
+                </Box>
                 <Button 
                   variant="outlined" 
                   size="small"
@@ -828,12 +854,9 @@ const Dashboard = () => {
                           </Typography>
                         </Box>
                         {(() => {
-                          // Normalize team names for consistent matching
-                          const normalizeTeam = (team) => team.toLowerCase().replace(/[^a-z0-9]/g, '');
-                          const homeNorm = normalizeTeam(game.homeTeam);
-                          const awayNorm = normalizeTeam(game.awayTeam);
-                          const gameId = `${awayNorm}-${homeNorm}`;
-                          const status = calendarStatus[gameId];
+                          // Simple identifier using game ID or team names
+                          const gameId = game.id || `${game.awayTeam}-${game.homeTeam}`.toLowerCase().replace(/\s+/g, '');
+                          const status = calendarStatus[gameId] || calendarStatus[`${game.awayTeam}-${game.homeTeam}`.toLowerCase().replace(/\s+/g, '')];
                           
                           if (status === 'added') {
                             return (
@@ -847,7 +870,7 @@ const Dashboard = () => {
                           } else if (status === 'failed') {
                             return (
                               <Chip 
-                                label="Failed to add" 
+                                label="Failed" 
                                 color="error" 
                                 size="small"
                               />
@@ -895,6 +918,106 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </Grid>
+
+        {/* Recent Results Section */}
+        {completedGames && completedGames.length > 0 && (
+          <Grid item xs={12}>
+            <Card sx={{ borderRadius: 4, boxShadow: 3 }}>
+              <CardContent sx={{ p: 3 }}>
+                <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                    Recent Results
+                  </Typography>
+                  <Chip 
+                    label={completedGames.length} 
+                    color="default" 
+                    size="small"
+                  />
+                </Box>
+
+                <Grid container spacing={2}>
+                  {completedGames.slice(0, 6).map((game) => (
+                    <Grid item xs={12} sm={6} md={4} key={game.id}>
+                      <Card 
+                        sx={{ 
+                          p: 2,
+                          border: '2px solid',
+                          borderColor: 'divider',
+                          backgroundColor: alpha(getSportColor(game.sport), 0.02),
+                          borderRadius: 2,
+                          '&:hover': {
+                            backgroundColor: alpha(getSportColor(game.sport), 0.05),
+                            borderColor: alpha(getSportColor(game.sport), 0.3),
+                          }
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                          <Avatar 
+                            sx={{ 
+                              bgcolor: getSportColor(game.sport),
+                              width: 28,
+                              height: 28,
+                            }}
+                          >
+                            {getSportIcon(game.sport)}
+                          </Avatar>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+                            {game.league || game.sport} • Final
+                          </Typography>
+                        </Box>
+
+                        {/* Teams and Scores */}
+                        <Box sx={{ mb: 1.5 }}>
+                          {/* Away Team */}
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                              {game.awayTeam}
+                            </Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 700, color: getSportColor(game.sport) }}>
+                              {game.awayScore && game.awayScore !== '-' ? game.awayScore : '-'}
+                            </Typography>
+                          </Box>
+                          
+                          {/* Home Team */}
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                              {game.homeTeam}
+                            </Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 700, color: getSportColor(game.sport) }}>
+                              {game.homeScore && game.homeScore !== '-' ? game.homeScore : '-'}
+                            </Typography>
+                          </Box>
+                        </Box>
+
+                        {/* Match Details */}
+                        <Box sx={{ pt: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                            {game.date ? new Date(game.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Date TBD'}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {game.venue || 'Venue TBD'}
+                          </Typography>
+                        </Box>
+                      </Card>
+                    </Grid>
+                  ))}
+                </Grid>
+
+                {/* See all results button */}
+                {completedGames.length > 6 && (
+                  <Button 
+                    variant="text" 
+                    fullWidth 
+                    sx={{ mt: 2 }}
+                    onClick={() => navigate('/matches', { state: { initialTab: 3 } })}
+                  >
+                    See All Results
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
       </Grid>
         </>
       )}

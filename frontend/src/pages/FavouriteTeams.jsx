@@ -18,7 +18,7 @@ import {
   TextField,
   InputAdornment,
 } from '@mui/material';
-import { Star, StarBorder, Search, ArrowBack, SportsSoccer, SportsBasketball, SportsFootball, SportsHockey } from '@mui/icons-material';
+import { Star, StarBorder, Search, ArrowBack, SportsSoccer, SportsBasketball, SportsFootball, SportsCricket } from '@mui/icons-material';
 import { AuthContext } from '../context/AuthContext';
 
 const FavouriteTeams = () => {
@@ -43,7 +43,7 @@ const FavouriteTeams = () => {
     {
       id: 'cricket',
       name: 'Cricket',
-      icon: <SportsHockey />,
+      icon: <SportsCricket />,
       color: '#4CAF50',
       leagues: [
         { id: '4344', name: 'Indian Premier League (IPL)', code: 'ipl' },

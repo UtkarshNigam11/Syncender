@@ -21,7 +21,7 @@ import {
   SportsSoccer,
   SportsBasketball,
   SportsFootball,
-  SportsHockey as Cricket,
+  SportsCricket,
   Add,
   TrendingUp,
 } from '@mui/icons-material';
@@ -59,7 +59,7 @@ const Sports = () => {
 
   const getSportIcon = (sportId) => {
     const icons = {
-      cricket: <Cricket />,
+      cricket: <SportsCricket />,
       nba: <SportsBasketball />,
       soccer: <SportsSoccer />,
       nfl: <SportsFootball />,

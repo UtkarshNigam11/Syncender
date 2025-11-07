@@ -402,21 +402,38 @@ exports.getCricketCacheStats = async (req, res) => {
 /**
  * Get unified dashboard data - all sports live and upcoming games
  * This endpoint consolidates data from multiple sports APIs
+ * Supports ?refresh=true to bypass cache (all data)
+ * Supports ?refreshLive=true to refresh only live matches (recommended)
  */
 exports.getDashboardData = async (req, res) => {
   try {
     console.log('📊 Fetching unified dashboard data...');
     
-    // Use cricket cache service instead of direct API calls
+    // Check if refresh is requested
+    const forceRefresh = req.query.refresh === 'true';
+    const refreshLive = req.query.refreshLive === 'true';
+    
+    if (forceRefresh) {
+      console.log('🔄 Force refresh requested - bypassing ALL cache');
+    } else if (refreshLive) {
+      console.log('🔄 Live refresh requested - clearing live match cache only');
+      const sportsCacheService = require('../services/sportsCacheService');
+      sportsCacheService.clearLiveCache();
+    }
+    
+    // Use cache services
     const cricketCacheService = require('../services/cricketCacheService');
+    const sportsCacheService = require('../services/sportsCacheService');
     const eventCleanupService = require('../services/eventCleanupService');
     
-    // Fetch all sports data in parallel (including completed matches from last 3 days)
+    // Fetch all sports data in parallel
+    // forceRefresh bypasses all caches
+    // refreshLive only clears live cache (will refetch sooner but upcoming may still be cached)
     const [nflData, nbaData, eplData, uclData, cricketData, completedMatches] = await Promise.allSettled([
-      sportsApiService.getLiveScores('nfl'),
-      sportsApiService.getLiveScores('nba'),
-      sportsApiService.getSoccerLeagueScores('eng.1'),
-      sportsApiService.getSoccerLeagueScores('uefa.champions'),
+      sportsCacheService.getNFLData(forceRefresh),
+      sportsCacheService.getNBAData(forceRefresh),
+      sportsCacheService.getEPLData(forceRefresh),
+      sportsCacheService.getUCLData(forceRefresh),
       cricketCacheService.getMatchesFromCache({ daysAhead: 7, daysBack: 2 }),
       eventCleanupService.getRecentCompletedMatches()
     ]);
@@ -453,8 +470,17 @@ exports.getDashboardData = async (req, res) => {
           const homeCompetitor = event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'home');
           const awayCompetitor = event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'away');
           
+          // Create unique ID: use event.id if available, otherwise create composite key
+          // Add both sport and league prefix to prevent duplicates across sports/leagues
+          // Also add timestamp component for extra uniqueness
+          const safeLeague = (league || sportName).replace(/\s+/g, '-').toLowerCase();
+          const safeSport = sportName.replace(/\s+/g, '-').toLowerCase();
+          const uniqueId = event.id 
+            ? `${safeSport}-${safeLeague}-${event.id}` 
+            : `${safeSport}-${safeLeague}-${index}-${Date.now()}`;
+          
           matches.push({
-            id: event.id || `${sportName}-${league}-${index}`,
+            id: uniqueId,
             sport: sportName,
             homeTeam: homeCompetitor?.team?.displayName || 'Home Team',
             awayTeam: awayCompetitor?.team?.displayName || 'Away Team',
@@ -492,18 +518,41 @@ exports.getDashboardData = async (req, res) => {
         const matchDate = event.dateTimeGMT ? new Date(event.dateTimeGMT) : new Date();
         const isLive = event.matchStarted && !event.matchEnded;
         const isUpcoming = matchDate >= now && matchDate <= threeDaysLater && !event.matchStarted;
+        const isFinal = event.matchEnded;
         
-        // Scores are removed from display as per user request
-        const homeScore = '-';
-        const awayScore = '-';
+        // Extract scores from API - format: [{r: runs, w: wickets, o: overs, inning: string}]
+        let homeScore = '-';
+        let awayScore = '-';
+        
+        if (event.score && Array.isArray(event.score) && event.score.length > 0) {
+          // Get the latest innings for each team
+          const team1Innings = event.score.filter(s => s.inning && s.inning.includes(event.teams?.[0]));
+          const team2Innings = event.score.filter(s => s.inning && s.inning.includes(event.teams?.[1]));
+          
+          // Use the last (most recent) inning for each team
+          if (team1Innings.length > 0) {
+            const latestInning = team1Innings[team1Innings.length - 1];
+            homeScore = `${latestInning.r}/${latestInning.w}`;
+            if (latestInning.o) homeScore += ` (${latestInning.o})`;
+          }
+          
+          if (team2Innings.length > 0) {
+            const latestInning = team2Innings[team2Innings.length - 1];
+            awayScore = `${latestInning.r}/${latestInning.w}`;
+            if (latestInning.o) awayScore += ` (${latestInning.o})`;
+          }
+        }
+        
+        // Create unique ID with cricket prefix
+        const uniqueId = event.matchId ? `cricket-${event.matchId}` : (event._id ? `cricket-${event._id}` : `cricket-${index}-${Date.now()}`);
 
         matches.push({
-          id: event.matchId || event._id || `cricket-${index}`,
+          id: uniqueId,
           sport: 'Cricket',
           homeTeam: event.teams?.[0] || 'Team 1',
           awayTeam: event.teams?.[1] || 'Team 2',
-          homeScore,
-          awayScore,
+          homeScore,  // Store actual scores
+          awayScore,  // Store actual scores
           status: event.status || 'Scheduled',
           venue: event.venue || 'TBD',
           date: event.dateTimeGMT || new Date(),
@@ -511,7 +560,7 @@ exports.getDashboardData = async (req, res) => {
           matchType: event.matchType,
           isLive,
           isUpcoming,
-          isFinal: event.matchEnded
+          isFinal
         });
       });
 
@@ -519,13 +568,26 @@ exports.getDashboardData = async (req, res) => {
     };
 
     // Extract all matches
-    const allMatches = [
+    const allMatchesRaw = [
       ...extractMatches(nflData, 'NFL'),
       ...extractMatches(nbaData, 'NBA'),
       ...extractMatches(eplData, 'Soccer', 'English Premier League'),
       ...extractMatches(uclData, 'Soccer', 'UEFA Champions League'),
       ...extractCricketMatches(cricketData)
     ];
+
+    // Deduplicate matches by ID (in case same event appears in multiple API responses)
+    const seenIds = new Set();
+    const allMatches = allMatchesRaw.filter(match => {
+      if (seenIds.has(match.id)) {
+        console.log(`⚠️  Removing duplicate match ID: ${match.id} - ${match.homeTeam} vs ${match.awayTeam}`);
+        return false;
+      }
+      seenIds.add(match.id);
+      return true;
+    });
+
+    console.log(`📋 Total matches: ${allMatchesRaw.length} raw, ${allMatches.length} after deduplication`);
 
     // Filter and sort
     const liveGames = allMatches.filter(m => m.isLive);
@@ -541,9 +603,12 @@ exports.getDashboardData = async (req, res) => {
     
     // Also include completed matches from database (last 3 days) for events user added
     if (completedMatches.status === 'fulfilled' && completedMatches.value?.length) {
-      completedMatches.value.forEach((event) => {
+      completedMatches.value.forEach((event, index) => {
+        // Create unique ID for completed events from database
+        const uniqueId = event._id ? `completed-db-${event._id}` : `completed-${index}-${Date.now()}`;
+        
         finishedGames.push({
-          id: event._id || `completed-${event.title}`,
+          id: uniqueId,
           sport: event.sport || 'Unknown',
           homeTeam: event.teams?.home || event.title?.split('vs')[0]?.trim() || 'Team 1',
           awayTeam: event.teams?.away || event.title?.split('vs')[1]?.trim() || 'Team 2',
@@ -564,7 +629,7 @@ exports.getDashboardData = async (req, res) => {
     const completedGames = finishedGames;
 
     console.log(`✅ Dashboard data: ${liveGames.length} live, ${upcomingGames.length} upcoming, ${completedGames.length} completed`);
-
+    
     res.json({
       success: true,
       data: {

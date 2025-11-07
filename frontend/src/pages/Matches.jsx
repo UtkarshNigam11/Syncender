@@ -19,13 +19,14 @@ import {
   IconButton,
   Menu,
   MenuItem,
+  CircularProgress,
 } from '@mui/material';
 import {
   Search as SearchIcon,
   SportsSoccer,
   SportsBasketball,
   SportsFootball,
-  SportsHockey as Cricket,
+  SportsCricket,
   CalendarToday,
   PlayArrow,
   Schedule,
@@ -34,6 +35,7 @@ import {
   Star,
   StarBorder,
   Check,
+  Refresh,
 } from '@mui/icons-material';
 
 const Matches = () => {
@@ -53,15 +55,24 @@ const Matches = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [addingMatchId, setAddingMatchId] = useState(null);
   const [addedEvents, setAddedEvents] = useState(new Set());
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const loadMatches = async (refreshLiveOnly = false) => {
+    try {
+      if (refreshLiveOnly) {
+        setRefreshing(true);
+      }
+      
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-        // Use the same unified dashboard API
-        const response = await axios.get('http://localhost:5000/api/sports/dashboard');
+      // Add query param based on refresh type
+      const url = refreshLiveOnly
+        ? 'http://localhost:5000/api/sports/dashboard?refreshLive=true'
+        : 'http://localhost:5000/api/sports/dashboard';
+
+      // Use the same unified dashboard API
+      const response = await axios.get(url);
         
         if (response.data.success) {
           const { liveGames, upcomingGames, completedGames } = response.data.data;
@@ -129,10 +140,17 @@ const Matches = () => {
           upcoming: [],
           completed: [],
         });
+      } finally {
+        setRefreshing(false);
       }
     };
-    load();
+
+  useEffect(() => {
+    loadMatches();
     fetchUserEvents();
+    
+    // Expose refresh function for button
+    window.matchesRefreshLive = () => loadMatches(true);
   }, []);
 
   const fetchUserEvents = async () => {
@@ -147,31 +165,24 @@ const Matches = () => {
       });
 
       if (response.data.success) {
-        // Create a set of event identifiers using multiple matching criteria
+        const events = response.data.events || [];
+        
+        // Create simple set of match identifiers
         const eventSet = new Set();
-        response.data.events.forEach(event => {
-          // Create multiple identifiers for better matching
-          // Method 1: Normalize team names and create identifier
-          const homeTeam = event.teams?.home || event.title?.split('vs')?.[1]?.trim() || '';
-          const awayTeam = event.teams?.away || event.title?.split('vs')?.[0]?.trim() || '';
-          
-          if (homeTeam && awayTeam) {
-            // Normalize: lowercase, remove extra spaces, remove special chars
-            const normalizeTeam = (team) => team.toLowerCase().replace(/[^a-z0-9]/g, '');
-            const id1 = `${normalizeTeam(awayTeam)}-${normalizeTeam(homeTeam)}`;
-            const id2 = `${normalizeTeam(homeTeam)}-${normalizeTeam(awayTeam)}`; // Both orders
-            eventSet.add(id1);
-            eventSet.add(id2);
+        events.forEach(event => {
+          // Use external match ID if available
+          if (event.externalIds?.matchId) {
+            eventSet.add(event.externalIds.matchId);
           }
           
-          // Method 2: Also store title-based identifier as fallback
-          if (event.title) {
-            const titleId = event.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-            eventSet.add(titleId);
+          // Fallback: create simple identifier from teams
+          if (event.teams?.home && event.teams?.away) {
+            const simpleId = `${event.teams.away}-${event.teams.home}`.toLowerCase().replace(/\s+/g, '');
+            eventSet.add(simpleId);
           }
         });
-        console.log('Matches: Loaded', response.data.events.length, 'events from calendar');
-        console.log('Matches: Created', eventSet.size, 'match identifiers');
+        
+        console.log('Matches: Loaded', events.length, 'events from calendar');
         setAddedEvents(eventSet);
       }
     } catch (error) {
@@ -180,24 +191,19 @@ const Matches = () => {
   };
 
   const isEventAdded = (match) => {
-    // Normalize team names
-    const normalizeTeam = (team) => team.toLowerCase().replace(/[^a-z0-9]/g, '');
-    const homeNorm = normalizeTeam(match.homeTeam);
-    const awayNorm = normalizeTeam(match.awayTeam);
+    // Check using match ID first
+    if (match.id && addedEvents.has(match.id)) {
+      return true;
+    }
     
-    // Check both team orders
-    const id1 = `${awayNorm}-${homeNorm}`;
-    const id2 = `${homeNorm}-${awayNorm}`;
-    
-    // Also check title format
-    const titleId = `${match.awayTeam} vs ${match.homeTeam}`.toLowerCase().replace(/[^a-z0-9]/g, '');
-    
-    return addedEvents.has(id1) || addedEvents.has(id2) || addedEvents.has(titleId);
+    // Fallback: check using simple team identifier
+    const simpleId = `${match.awayTeam}-${match.homeTeam}`.toLowerCase().replace(/\s+/g, '');
+    return addedEvents.has(simpleId);
   };
 
   const getSportIcon = (sport) => {
     const icons = {
-      Cricket: <Cricket />,
+      Cricket: <SportsCricket />,
       NBA: <SportsBasketball />,
       Soccer: <SportsSoccer />,
       NFL: <SportsFootball />,
@@ -232,34 +238,10 @@ const Matches = () => {
   const addToCalendar = async (match, calendarType = 'google') => {
     setAddingMatchId(match.id);
     try {
-      // Parse date and time more reliably
-      let startTime;
-      if (match.date === 'Today' || match.date === '2025-08-10') {
-        // For today's matches, use current date with the specified time
-        const today = new Date();
-        if (match.time) {
-          // Time is now in 24-hour format (HH:MM)
-          const [hours, minutes] = match.time.split(':');
-          today.setHours(parseInt(hours), parseInt(minutes || 0), 0, 0);
-          startTime = today;
-        } else {
-          startTime = new Date();
-        }
-      } else if (match.date.includes('-')) {
-        // Format: YYYY-MM-DD
-        if (match.time) {
-          // Time is now in 24-hour format (HH:MM)
-          startTime = new Date(`${match.date}T${match.time}:00`);
-        } else {
-          startTime = new Date(`${match.date}T19:00:00`);
-        }
-      } else {
-        // Handle other date formats or set default
-        startTime = new Date();
-        startTime.setHours(19, 0, 0, 0); // Default to 7 PM
-      }
-
-      // Estimate end time (3 hours after start for most sports)
+      // Parse date/time - backend will handle complex parsing
+      const [day, month, year] = match.date.split('/');
+      const dateStr = `${year}-${month}-${day}`;
+      const startTime = new Date(`${dateStr}T${match.time || '19:00'}:00`);
       const endTime = new Date(startTime.getTime() + 3 * 60 * 60 * 1000);
 
       const eventData = {
@@ -272,132 +254,62 @@ const Matches = () => {
         teams: {
           home: match.homeTeam,
           away: match.awayTeam
+        },
+        externalIds: {
+          matchId: match.id // Store the backend-generated unique ID
         }
       };
 
-      const token = localStorage.getItem('token'); // Assuming token is stored in localStorage
-      console.log('Token found:', !!token);
-      console.log('Event data:', eventData);
-      console.log('Calendar type:', calendarType);
+      const token = localStorage.getItem('token');
       
-      if (!token) {
-        // Redirect to login for Google Calendar, or allow Apple Calendar download
-        if (calendarType === 'google') {
-          navigate('/login');
-          return;
-        }
-        // For Apple Calendar, continue to download without authentication
+      if (!token && calendarType === 'google') {
+        navigate('/login');
+        return;
       }
 
       if (calendarType === 'apple') {
-        // For Apple Calendar, download ICS file
-        if (token) {
-          // Authenticated user - use backend API
-          const response = await axios.post('http://localhost:5000/api/apple/calendar', {
-            summary: eventData.title,
-            description: eventData.description,
-            startTime: eventData.startTime,
-            endTime: eventData.endTime,
-            location: eventData.location
-          }, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            },
-            responseType: 'blob'
-          });
+        // Download ICS file via backend or generate client-side
+        const icsResponse = await axios.post('http://localhost:5000/api/apple/calendar', {
+          summary: eventData.title,
+          description: eventData.description,
+          startTime: eventData.startTime,
+          endTime: eventData.endTime,
+          location: eventData.location
+        }, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          responseType: 'blob'
+        });
 
-          // Create and trigger download
-          const blob = new Blob([response.data], { type: 'text/calendar' });
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `${match.awayTeam}_vs_${match.homeTeam}.ics`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url);
-        } else {
-          // Demo mode - generate ICS file client-side
-          const generateICS = (eventData) => {
-            const formatDate = (date) => {
-              return new Date(date).toISOString().replace(/-|:|\./g, '').slice(0, 15) + 'Z';
-            };
-            
-            const now = new Date();
-            const uid = 'match-' + Date.now() + '@sportscalendar.com';
-            
-            return [
-              'BEGIN:VCALENDAR',
-              'VERSION:2.0',
-              'PRODID:-//Sports Calendar Integration//EN',
-              'CALSCALE:GREGORIAN',
-              'METHOD:PUBLISH',
-              'BEGIN:VEVENT',
-              `UID:${uid}`,
-              `DTSTAMP:${formatDate(now)}`,
-              `DTSTART:${formatDate(eventData.startTime)}`,
-              `DTEND:${formatDate(eventData.endTime)}`,
-              `SUMMARY:${eventData.title}`,
-              `DESCRIPTION:${eventData.description}`,
-              `LOCATION:${eventData.location}`,
-              'END:VEVENT',
-              'END:VCALENDAR'
-            ].join('\r\n');
-          };
-          
-          const icsContent = generateICS(eventData);
-          const blob = new Blob([icsContent], { type: 'text/calendar' });
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `${match.awayTeam}_vs_${match.homeTeam}.ics`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url);
-        }
+        const blob = new Blob([icsResponse.data], { type: 'text/calendar' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${match.awayTeam}_vs_${match.homeTeam}.ics`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
       } else {
-        // For Google Calendar
-        if (!token) {
-          navigate('/login');
-          return;
-        }
-        
-        console.log('Sending to Google Calendar API:', eventData);
+        // Google Calendar
         const response = await axios.post('http://localhost:5000/api/events', eventData, {
           headers: {
             Authorization: `Bearer ${token}`
           }
         });
         
-        console.log('Google Calendar response:', response.data);
-        
-        // Check if event already exists
-        if (response.data.alreadyExists) {
-          console.log('Event already exists in calendar');
-          // Update the UI to show it's added
-          fetchUserEvents();
-          return;
-        }
-        
-        // Event was successfully added
-        console.log('Event added successfully');
-        fetchUserEvents();
+        console.log(response.data.alreadyExists ? 'Event already exists' : 'Event added successfully');
       }
+      
+      await fetchUserEvents(); // Refresh event list
     } catch (error) {
       console.error('Error adding to calendar:', error);
-      console.error('Error response:', error.response?.data);
-      console.error('Error status:', error.response?.status);
-      if (error.response && error.response.status === 401) {
+      if (error.response?.status === 401) {
         navigate('/login');
-      } else if (error.response && error.response.data.message) {
-        if (error.response.data.message.includes('Google Calendar not connected')) {
-          navigate('/profile');
-        }
+      } else if (error.response?.data?.message?.includes('Google')) {
+        navigate('/profile');
       }
     } finally {
       setAddingMatchId(null);
-      // Refresh the list of added events
       fetchUserEvents();
     }
   };
@@ -672,6 +584,34 @@ const Matches = () => {
       </Card>
 
       {/* Matches Grid */}
+      {tabValue === 0 && matches.live.length > 0 && (
+        <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Live Matches
+          </Typography>
+          <IconButton
+            onClick={() => window.matchesRefreshLive?.()}
+            disabled={refreshing}
+            size="small"
+            sx={{
+              bgcolor: refreshing ? 'action.disabledBackground' : 'primary.main',
+              color: 'white',
+              width: 32,
+              height: 32,
+              '&:hover': { bgcolor: 'primary.dark' },
+              '&:disabled': { bgcolor: 'action.disabledBackground' }
+            }}
+            title="Refresh live matches"
+          >
+            {refreshing ? (
+              <CircularProgress size={18} sx={{ color: 'white' }} />
+            ) : (
+              <Refresh sx={{ fontSize: 18 }} />
+            )}
+          </IconButton>
+        </Box>
+      )}
+      
       <Grid container spacing={3}>
         {filteredMatches.length > 0 ? (
           filteredMatches.map(renderMatchCard)
