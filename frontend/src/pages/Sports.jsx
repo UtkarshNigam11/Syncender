@@ -24,6 +24,7 @@ import {
   SportsHockey as Cricket,
   Add,
   TrendingUp,
+  EmojiEvents,
 } from '@mui/icons-material';
 
 const Sports = () => {
@@ -109,13 +110,86 @@ const Sports = () => {
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, mb: 1 }}>
-          Explore Sports 🏆
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Discover and follow your favourite sports. Add events to your calendar.
-        </Typography>
+      <Box 
+        sx={{ 
+          mb: 4, 
+          p: 5,
+          borderRadius: 4,
+          background: (theme) => theme.palette.mode === 'dark' 
+            ? 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)' 
+            : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: '0 20px 60px -10px rgba(102, 126, 234, 0.5)',
+        }}
+      >
+        {/* Decorative circles */}
+        <Box
+          sx={{
+            position: 'absolute',
+            width: '300px',
+            height: '300px',
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.1)',
+            top: '-100px',
+            right: '-50px',
+            backdropFilter: 'blur(20px)',
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            width: '200px',
+            height: '200px',
+            borderRadius: '50%',
+            background: 'rgba(255, 255, 255, 0.08)',
+            bottom: '-50px',
+            left: '-30px',
+            backdropFilter: 'blur(20px)',
+          }}
+        />
+
+        <Box sx={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 80,
+              height: 80,
+              borderRadius: 3,
+              background: 'rgba(255, 255, 255, 0.2)',
+              backdropFilter: 'blur(10px)',
+              border: '2px solid rgba(255, 255, 255, 0.3)',
+            }}
+          >
+            <EmojiEvents sx={{ fontSize: 48, color: 'white' }} />
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <Typography 
+              variant="h3" 
+              sx={{ 
+                fontWeight: 900, 
+                mb: 1,
+                color: 'white',
+                letterSpacing: '-0.5px',
+                textShadow: '0 2px 20px rgba(0,0,0,0.2)',
+              }}
+            >
+              Explore Sports
+            </Typography>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                color: 'rgba(255, 255, 255, 0.95)',
+                fontWeight: 400,
+                letterSpacing: '0.2px',
+              }}
+            >
+              Discover and follow your favourite sports. Add events to your calendar.
+            </Typography>
+          </Box>
+        </Box>
       </Box>
 
       {/* Search and Filter */}
