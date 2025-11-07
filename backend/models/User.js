@@ -57,16 +57,25 @@ const userSchema = new mongoose.Schema({
     refreshToken: String,
     expiryDate: Date
   },
-  // Favorite teams for auto-sync
-  favoriteTeams: [{
-    sport: String,
-    league: String,
-    teamId: String,
-    name: String,
-  }],
   preferences: {
-    favoriteTeams: { type: [String], default: [] },
-    favoriteLeagues: { type: [String], default: [] },
+    // Favourite teams with full details (for display and filtering)
+    favoriteTeams: [{
+      sport: String,
+      league: String,
+      teamId: String,
+      name: String,
+      shortName: String,
+      logo: String,
+      addedAt: { type: Date, default: Date.now }
+    }],
+    // Favourite leagues (Pro feature - for auto-sync)
+    favoriteLeagues: [{
+      sport: String,
+      league: String,
+      name: String,
+      logo: String,
+      addedAt: { type: Date, default: Date.now }
+    }],
     favoriteSports: { type: [String], default: [] },
     timezone: {
       type: String,

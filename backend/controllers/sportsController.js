@@ -1,5 +1,15 @@
 const sportsApiService = require('../services/sportsApiService');
 
+// In-memory cache for teams data (teams rarely change)
+const teamsCache = {
+  soccer: new Map(), // Map of league -> teams
+  cricket: new Map(), // Map of league -> teams
+  nfl: { data: null, timestamp: null },
+  nba: { data: null, timestamp: null }
+};
+
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
 /**
  * Get supported sports list
  */
@@ -56,6 +66,251 @@ exports.getTeams = async (req, res) => {
     res.status(500).json({
       success: false,
       message: `Failed to get teams for ${req.params.sport}`,
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get Soccer teams by league (with caching)
+ */
+exports.getSoccerTeams = async (req, res) => {
+  try {
+    const { league } = req.query; // e.g., eng.1, uefa.champions
+    
+    if (!league) {
+      return res.status(400).json({
+        success: false,
+        message: 'League parameter is required (e.g., ?league=eng.1)'
+      });
+    }
+
+    // Check cache first
+    const cached = teamsCache.soccer.get(league);
+    if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+      console.log(`✅ Returning cached soccer teams for ${league}`);
+      return res.json(cached.data);
+    }
+
+    // Fetch teams from ESPN API
+    const response = await require('axios').get(
+      `http://site.api.espn.com/apis/site/v2/sports/soccer/${league}/teams`
+    );
+
+    const teams = response.data.sports?.[0]?.leagues?.[0]?.teams?.map(teamData => ({
+      id: teamData.team?.id,
+      name: teamData.team?.displayName || teamData.team?.name,
+      shortName: teamData.team?.shortDisplayName,
+      abbreviation: teamData.team?.abbreviation,
+      logo: teamData.team?.logos?.[0]?.href,
+      location: teamData.team?.location,
+      color: teamData.team?.color,
+      league: response.data.sports?.[0]?.leagues?.[0]?.name,
+      leagueCode: league,
+    })) || [];
+
+    const responseData = {
+      success: true,
+      data: teams,
+      league,
+      count: teams.length
+    };
+
+    // Cache the result
+    teamsCache.soccer.set(league, {
+      data: responseData,
+      timestamp: Date.now()
+    });
+    console.log(`💾 Cached soccer teams for ${league}`);
+
+    res.json(responseData);
+  } catch (error) {
+    console.error('Error getting soccer teams:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get soccer teams',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get Cricket teams by league (with caching)
+ */
+exports.getCricketTeams = async (req, res) => {
+  try {
+    const { league } = req.query; // e.g., ipl, bbl, psl
+    
+    // Check cache first
+    const cached = teamsCache.cricket.get(league?.toLowerCase());
+    if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+      console.log(`✅ Returning cached cricket teams for ${league}`);
+      return res.json(cached.data);
+    }
+    
+    // CricAPI doesn't have a direct teams endpoint, so we use curated team lists
+    // with proper logos from Wikipedia/official sources
+    const cricketTeams = {
+      'ipl': [
+        { id: 'MI', name: 'Mumbai Indians', shortName: 'MI', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/c/cd/Mumbai_Indians_Logo.svg/200px-Mumbai_Indians_Logo.svg.png', location: 'Mumbai', color: '004BA0' },
+        { id: 'CSK', name: 'Chennai Super Kings', shortName: 'CSK', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/2/2b/Chennai_Super_Kings_Logo.svg/200px-Chennai_Super_Kings_Logo.svg.png', location: 'Chennai', color: 'FDB913' },
+        { id: 'RCB', name: 'Royal Challengers Bangalore', shortName: 'RCB', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/2/2a/Royal_Challengers_Bangalore_2020.svg/200px-Royal_Challengers_Bangalore_2020.svg.png', location: 'Bangalore', color: 'EC1C24' },
+        { id: 'KKR', name: 'Kolkata Knight Riders', shortName: 'KKR', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/4/4c/Kolkata_Knight_Riders_Logo.svg/200px-Kolkata_Knight_Riders_Logo.svg.png', location: 'Kolkata', color: '3A225D' },
+        { id: 'DC', name: 'Delhi Capitals', shortName: 'DC', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/f/f5/Delhi_Capitals_Logo.svg/200px-Delhi_Capitals_Logo.svg.png', location: 'Delhi', color: '004C93' },
+        { id: 'PBKS', name: 'Punjab Kings', shortName: 'PBKS', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/9/9e/Punjab_Kings_Logo.svg/200px-Punjab_Kings_Logo.svg.png', location: 'Punjab', color: 'ED1B24' },
+        { id: 'RR', name: 'Rajasthan Royals', shortName: 'RR', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/6/60/Rajasthan_Royals_Logo.svg/200px-Rajasthan_Royals_Logo.svg.png', location: 'Jaipur', color: 'EA1A85' },
+        { id: 'SRH', name: 'Sunrisers Hyderabad', shortName: 'SRH', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/8/81/Sunrisers_Hyderabad.svg/200px-Sunrisers_Hyderabad.svg.png', location: 'Hyderabad', color: 'FF822A' },
+        { id: 'GT', name: 'Gujarat Titans', shortName: 'GT', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/0/09/Gujarat_Titans_Logo.svg/200px-Gujarat_Titans_Logo.svg.png', location: 'Ahmedabad', color: '1C2E4A' },
+        { id: 'LSG', name: 'Lucknow Super Giants', shortName: 'LSG', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Lucknow_Super_Giants_Logo.svg/200px-Lucknow_Super_Giants_Logo.svg.png', location: 'Lucknow', color: '00A1DE' },
+      ],
+      'icc': [
+        { id: 'IND', name: 'India', shortName: 'IND', logo: 'https://cdorg.b-cdn.net/flags/generic/IN.svg', location: 'India', color: '138808' },
+        { id: 'AUS', name: 'Australia', shortName: 'AUS', logo: 'https://cdorg.b-cdn.net/flags/generic/AU.svg', location: 'Australia', color: 'FFC600' },
+        { id: 'ENG', name: 'England', shortName: 'ENG', logo: 'https://cdorg.b-cdn.net/flags/generic/GB.svg', location: 'England', color: 'C8102E' },
+        { id: 'PAK', name: 'Pakistan', shortName: 'PAK', logo: 'https://cdorg.b-cdn.net/flags/generic/PK.svg', location: 'Pakistan', color: '01411C' },
+        { id: 'SA', name: 'South Africa', shortName: 'SA', logo: 'https://cdorg.b-cdn.net/flags/generic/ZA.svg', location: 'South Africa', color: '007A4D' },
+        { id: 'NZ', name: 'New Zealand', shortName: 'NZ', logo: 'https://cdorg.b-cdn.net/flags/generic/NZ.svg', location: 'New Zealand', color: '000000' },
+        { id: 'WI', name: 'West Indies', shortName: 'WI', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Flag_of_the_West_Indies_Federation.svg/200px-Flag_of_the_West_Indies_Federation.svg.png', location: 'Caribbean', color: '7B0041' },
+        { id: 'SL', name: 'Sri Lanka', shortName: 'SL', logo: 'https://cdorg.b-cdn.net/flags/generic/LK.svg', location: 'Sri Lanka', color: '8B0000' },
+        { id: 'BAN', name: 'Bangladesh', shortName: 'BAN', logo: 'https://cdorg.b-cdn.net/flags/generic/BD.svg', location: 'Bangladesh', color: '006A4E' },
+        { id: 'AFG', name: 'Afghanistan', shortName: 'AFG', logo: 'https://cdorg.b-cdn.net/flags/generic/AF.svg', location: 'Afghanistan', color: 'D32011' },
+      ],
+      'bbl': [
+        { id: 'STR', name: 'Adelaide Strikers', shortName: 'Strikers', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/0/0b/Adelaide_Strikers.svg/200px-Adelaide_Strikers.svg.png', location: 'Adelaide', color: '00A0DC' },
+        { id: 'HEA', name: 'Brisbane Heat', shortName: 'Heat', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/6/62/Brisbane_Heat.svg/200px-Brisbane_Heat.svg.png', location: 'Brisbane', color: 'FF6900' },
+        { id: 'HUR', name: 'Hobart Hurricanes', shortName: 'Hurricanes', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/9/9f/Hobart_Hurricanes.svg/200px-Hobart_Hurricanes.svg.png', location: 'Hobart', color: '6A2C91' },
+        { id: 'STA', name: 'Melbourne Stars', shortName: 'Stars', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/3/3f/Melbourne_Stars.svg/200px-Melbourne_Stars.svg.png', location: 'Melbourne', color: '00843D' },
+        { id: 'REN', name: 'Melbourne Renegades', shortName: 'Renegades', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/d/d8/Melbourne_Renegades.svg/200px-Melbourne_Renegades.svg.png', location: 'Melbourne', color: 'ED1B24' },
+        { id: 'SCO', name: 'Perth Scorchers', shortName: 'Scorchers', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/3/34/Perth_Scorchers.svg/200px-Perth_Scorchers.svg.png', location: 'Perth', color: 'FF6900' },
+        { id: 'SIX', name: 'Sydney Sixers', shortName: 'Sixers', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/d/d9/Sydney_Sixers.svg/200px-Sydney_Sixers.svg.png', location: 'Sydney', color: 'ED0677' },
+        { id: 'THU', name: 'Sydney Thunder', shortName: 'Thunder', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/6/6b/Sydney_Thunder.svg/200px-Sydney_Thunder.svg.png', location: 'Sydney', color: '4EC200' },
+      ],
+      'psl': [
+        { id: 'ISL', name: 'Islamabad United', shortName: 'United', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/1/1b/Islamabad_United_Logo.svg/200px-Islamabad_United_Logo.svg.png', location: 'Islamabad', color: 'DC1F26' },
+        { id: 'KAR', name: 'Karachi Kings', shortName: 'Kings', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/7/7b/Karachi_Kings_Logo.svg/200px-Karachi_Kings_Logo.svg.png', location: 'Karachi', color: '003087' },
+        { id: 'LAH', name: 'Lahore Qalandars', shortName: 'Qalandars', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/e/eb/Lahore_Qalandars_logo.svg/200px-Lahore_Qalandars_logo.svg.png', location: 'Lahore', color: '78BC43' },
+        { id: 'MUL', name: 'Multan Sultans', shortName: 'Sultans', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/b/b7/Multan_Sultans_Logo.svg/200px-Multan_Sultans_Logo.svg.png', location: 'Multan', color: 'FFC60A' },
+        { id: 'PES', name: 'Peshawar Zalmi', shortName: 'Zalmi', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/8/85/Peshawar_Zalmi_Logo.svg/200px-Peshawar_Zalmi_Logo.svg.png', location: 'Peshawar', color: 'FFD700' },
+        { id: 'QUE', name: 'Quetta Gladiators', shortName: 'Gladiators', logo: 'https://upload.wikimedia.org/wikipedia/en/thumb/6/6b/Quetta_Gladiators_Logo.svg/200px-Quetta_Gladiators_Logo.svg.png', location: 'Quetta', color: '9B30FF' },
+      ],
+    };
+
+    const teams = cricketTeams[league?.toLowerCase()] || [];
+    
+    const responseData = {
+      success: true,
+      data: teams,
+      league: league?.toLowerCase(),
+      count: teams.length
+    };
+
+    // Cache the result
+    teamsCache.cricket.set(league?.toLowerCase(), {
+      data: responseData,
+      timestamp: Date.now()
+    });
+    console.log(`💾 Cached cricket teams for ${league}`);
+
+    res.json(responseData);
+  } catch (error) {
+    console.error('Error getting cricket teams:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get cricket teams',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get NFL teams (with caching)
+ */
+exports.getNFLTeams = async (req, res) => {
+  try {
+    // Check cache first
+    if (teamsCache.nfl.data && (Date.now() - teamsCache.nfl.timestamp < CACHE_DURATION)) {
+      console.log(`✅ Returning cached NFL teams`);
+      return res.json(teamsCache.nfl.data);
+    }
+
+    const response = await require('axios').get(
+      'http://site.api.espn.com/apis/site/v2/sports/football/nfl/teams'
+    );
+
+    const teams = response.data.sports?.[0]?.leagues?.[0]?.teams?.map(teamData => ({
+      id: teamData.team?.id,
+      name: teamData.team?.displayName || teamData.team?.name,
+      shortName: teamData.team?.shortDisplayName,
+      abbreviation: teamData.team?.abbreviation,
+      logo: teamData.team?.logos?.[0]?.href,
+      location: teamData.team?.location,
+      color: teamData.team?.color,
+    })) || [];
+
+    const responseData = {
+      success: true,
+      data: teams,
+      count: teams.length
+    };
+
+    // Cache the result
+    teamsCache.nfl.data = responseData;
+    teamsCache.nfl.timestamp = Date.now();
+    console.log(`💾 Cached ${teams.length} NFL teams`);
+
+    res.json(responseData);
+  } catch (error) {
+    console.error('Error getting NFL teams:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get NFL teams',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get NBA teams (with caching)
+ */
+exports.getNBATeams = async (req, res) => {
+  try {
+    // Check cache first
+    if (teamsCache.nba.data && (Date.now() - teamsCache.nba.timestamp < CACHE_DURATION)) {
+      console.log(`✅ Returning cached NBA teams`);
+      return res.json(teamsCache.nba.data);
+    }
+
+    const response = await require('axios').get(
+      'http://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams'
+    );
+
+    const teams = response.data.sports?.[0]?.leagues?.[0]?.teams?.map(teamData => ({
+      id: teamData.team?.id,
+      name: teamData.team?.displayName || teamData.team?.name,
+      shortName: teamData.team?.shortDisplayName,
+      abbreviation: teamData.team?.abbreviation,
+      logo: teamData.team?.logos?.[0]?.href,
+      location: teamData.team?.location,
+      color: teamData.team?.color,
+    })) || [];
+
+    const responseData = {
+      success: true,
+      data: teams,
+      count: teams.length
+    };
+
+    // Cache the result
+    teamsCache.nba.data = responseData;
+    teamsCache.nba.timestamp = Date.now();
+    console.log(`💾 Cached ${teams.length} NBA teams`);
+
+    res.json(responseData);
+  } catch (error) {
+    console.error('Error getting NBA teams:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get NBA teams',
       error: error.message
     });
   }
@@ -402,21 +657,38 @@ exports.getCricketCacheStats = async (req, res) => {
 /**
  * Get unified dashboard data - all sports live and upcoming games
  * This endpoint consolidates data from multiple sports APIs
+ * Supports ?refresh=true to bypass cache (all data)
+ * Supports ?refreshLive=true to refresh only live matches (recommended)
  */
 exports.getDashboardData = async (req, res) => {
   try {
     console.log('📊 Fetching unified dashboard data...');
     
-    // Use cricket cache service instead of direct API calls
+    // Check if refresh is requested
+    const forceRefresh = req.query.refresh === 'true';
+    const refreshLive = req.query.refreshLive === 'true';
+    
+    if (forceRefresh) {
+      console.log('🔄 Force refresh requested - bypassing ALL cache');
+    } else if (refreshLive) {
+      console.log('🔄 Live refresh requested - clearing live match cache only');
+      const sportsCacheService = require('../services/sportsCacheService');
+      sportsCacheService.clearLiveCache();
+    }
+    
+    // Use cache services
     const cricketCacheService = require('../services/cricketCacheService');
+    const sportsCacheService = require('../services/sportsCacheService');
     const eventCleanupService = require('../services/eventCleanupService');
     
-    // Fetch all sports data in parallel (including completed matches from last 3 days)
+    // Fetch all sports data in parallel
+    // forceRefresh bypasses all caches
+    // refreshLive only clears live cache (will refetch sooner but upcoming may still be cached)
     const [nflData, nbaData, eplData, uclData, cricketData, completedMatches] = await Promise.allSettled([
-      sportsApiService.getLiveScores('nfl'),
-      sportsApiService.getLiveScores('nba'),
-      sportsApiService.getSoccerLeagueScores('eng.1'),
-      sportsApiService.getSoccerLeagueScores('uefa.champions'),
+      sportsCacheService.getNFLData(forceRefresh),
+      sportsCacheService.getNBAData(forceRefresh),
+      sportsCacheService.getEPLData(forceRefresh),
+      sportsCacheService.getUCLData(forceRefresh),
       cricketCacheService.getMatchesFromCache({ daysAhead: 7, daysBack: 2 }),
       eventCleanupService.getRecentCompletedMatches()
     ]);
@@ -453,8 +725,17 @@ exports.getDashboardData = async (req, res) => {
           const homeCompetitor = event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'home');
           const awayCompetitor = event.competitions?.[0]?.competitors?.find(c => c.homeAway === 'away');
           
+          // Create unique ID: use event.id if available, otherwise create composite key
+          // Add both sport and league prefix to prevent duplicates across sports/leagues
+          // Also add timestamp component for extra uniqueness
+          const safeLeague = (league || sportName).replace(/\s+/g, '-').toLowerCase();
+          const safeSport = sportName.replace(/\s+/g, '-').toLowerCase();
+          const uniqueId = event.id 
+            ? `${safeSport}-${safeLeague}-${event.id}` 
+            : `${safeSport}-${safeLeague}-${index}-${Date.now()}`;
+          
           matches.push({
-            id: event.id || `${sportName}-${league}-${index}`,
+            id: uniqueId,
             sport: sportName,
             homeTeam: homeCompetitor?.team?.displayName || 'Home Team',
             awayTeam: awayCompetitor?.team?.displayName || 'Away Team',
@@ -492,18 +773,41 @@ exports.getDashboardData = async (req, res) => {
         const matchDate = event.dateTimeGMT ? new Date(event.dateTimeGMT) : new Date();
         const isLive = event.matchStarted && !event.matchEnded;
         const isUpcoming = matchDate >= now && matchDate <= threeDaysLater && !event.matchStarted;
+        const isFinal = event.matchEnded;
         
-        // Scores are removed from display as per user request
-        const homeScore = '-';
-        const awayScore = '-';
+        // Extract scores from API - format: [{r: runs, w: wickets, o: overs, inning: string}]
+        let homeScore = '-';
+        let awayScore = '-';
+        
+        if (event.score && Array.isArray(event.score) && event.score.length > 0) {
+          // Get the latest innings for each team
+          const team1Innings = event.score.filter(s => s.inning && s.inning.includes(event.teams?.[0]));
+          const team2Innings = event.score.filter(s => s.inning && s.inning.includes(event.teams?.[1]));
+          
+          // Use the last (most recent) inning for each team
+          if (team1Innings.length > 0) {
+            const latestInning = team1Innings[team1Innings.length - 1];
+            homeScore = `${latestInning.r}/${latestInning.w}`;
+            if (latestInning.o) homeScore += ` (${latestInning.o})`;
+          }
+          
+          if (team2Innings.length > 0) {
+            const latestInning = team2Innings[team2Innings.length - 1];
+            awayScore = `${latestInning.r}/${latestInning.w}`;
+            if (latestInning.o) awayScore += ` (${latestInning.o})`;
+          }
+        }
+        
+        // Create unique ID with cricket prefix
+        const uniqueId = event.matchId ? `cricket-${event.matchId}` : (event._id ? `cricket-${event._id}` : `cricket-${index}-${Date.now()}`);
 
         matches.push({
-          id: event.matchId || event._id || `cricket-${index}`,
+          id: uniqueId,
           sport: 'Cricket',
           homeTeam: event.teams?.[0] || 'Team 1',
           awayTeam: event.teams?.[1] || 'Team 2',
-          homeScore,
-          awayScore,
+          homeScore,  // Store actual scores
+          awayScore,  // Store actual scores
           status: event.status || 'Scheduled',
           venue: event.venue || 'TBD',
           date: event.dateTimeGMT || new Date(),
@@ -511,7 +815,7 @@ exports.getDashboardData = async (req, res) => {
           matchType: event.matchType,
           isLive,
           isUpcoming,
-          isFinal: event.matchEnded
+          isFinal
         });
       });
 
@@ -519,13 +823,26 @@ exports.getDashboardData = async (req, res) => {
     };
 
     // Extract all matches
-    const allMatches = [
+    const allMatchesRaw = [
       ...extractMatches(nflData, 'NFL'),
       ...extractMatches(nbaData, 'NBA'),
       ...extractMatches(eplData, 'Soccer', 'English Premier League'),
       ...extractMatches(uclData, 'Soccer', 'UEFA Champions League'),
       ...extractCricketMatches(cricketData)
     ];
+
+    // Deduplicate matches by ID (in case same event appears in multiple API responses)
+    const seenIds = new Set();
+    const allMatches = allMatchesRaw.filter(match => {
+      if (seenIds.has(match.id)) {
+        console.log(`⚠️  Removing duplicate match ID: ${match.id} - ${match.homeTeam} vs ${match.awayTeam}`);
+        return false;
+      }
+      seenIds.add(match.id);
+      return true;
+    });
+
+    console.log(`📋 Total matches: ${allMatchesRaw.length} raw, ${allMatches.length} after deduplication`);
 
     // Filter and sort
     const liveGames = allMatches.filter(m => m.isLive);
@@ -541,9 +858,12 @@ exports.getDashboardData = async (req, res) => {
     
     // Also include completed matches from database (last 3 days) for events user added
     if (completedMatches.status === 'fulfilled' && completedMatches.value?.length) {
-      completedMatches.value.forEach((event) => {
+      completedMatches.value.forEach((event, index) => {
+        // Create unique ID for completed events from database
+        const uniqueId = event._id ? `completed-db-${event._id}` : `completed-${index}-${Date.now()}`;
+        
         finishedGames.push({
-          id: event._id || `completed-${event.title}`,
+          id: uniqueId,
           sport: event.sport || 'Unknown',
           homeTeam: event.teams?.home || event.title?.split('vs')[0]?.trim() || 'Team 1',
           awayTeam: event.teams?.away || event.title?.split('vs')[1]?.trim() || 'Team 2',
@@ -564,7 +884,7 @@ exports.getDashboardData = async (req, res) => {
     const completedGames = finishedGames;
 
     console.log(`✅ Dashboard data: ${liveGames.length} live, ${upcomingGames.length} upcoming, ${completedGames.length} completed`);
-
+    
     res.json({
       success: true,
       data: {

@@ -32,7 +32,7 @@ import {
   SportsSoccer,
   SportsBasketball,
   SportsFootball,
-  SportsHockey as Cricket,
+  SportsCricket,
   Google,
   Apple,
   Download,
@@ -57,7 +57,11 @@ const Calendar = () => {
     try {
       setLoading(true);
       const response = await axios.get('/api/events');
-      const formattedEvents = response.data.map(event => ({
+      
+      // Handle response structure { success: true, events: [...] }
+      const eventsData = response.data?.events || response.data || [];
+      
+      const formattedEvents = eventsData.map(event => ({
         id: event._id,
         title: event.title,
         sport: event.sport,
@@ -189,7 +193,7 @@ const Calendar = () => {
 
   const getSportIcon = (sport) => {
     const icons = {
-      Cricket: <Cricket />,
+      Cricket: <SportsCricket />,
       NBA: <SportsBasketball />,
       Soccer: <SportsSoccer />,
       NFL: <SportsFootball />,
@@ -586,14 +590,6 @@ const Calendar = () => {
                         <Box sx={{ flexGrow: 1 }}>
                           <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                             {event.title}
-                            {event.googleCalendarEventId && (
-                              <Chip 
-                                label="Synced" 
-                                size="small" 
-                                color="success" 
-                                sx={{ ml: 1, height: 20, fontSize: '0.7rem' }}
-                              />
-                            )}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
                             {event.time} • {event.venue}
@@ -673,14 +669,6 @@ const Calendar = () => {
                         <Box sx={{ flexGrow: 1 }}>
                           <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                             {event.title}
-                            {event.googleCalendarEventId && (
-                              <Chip 
-                                label="Synced" 
-                                size="small" 
-                                color="success" 
-                                sx={{ ml: 1, height: 18, fontSize: '0.65rem' }}
-                              />
-                            )}
                           </Typography>
                           <Typography variant="caption" color="text.secondary" display="block">
                             {formatDateIndian(event.date)} • {event.time}

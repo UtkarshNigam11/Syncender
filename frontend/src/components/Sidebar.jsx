@@ -15,13 +15,10 @@ import {
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
-  Sports as SportsIcon,
   CalendarToday as CalendarIcon,
   EmojiEvents as MatchesIcon,
-  TrendingUp as TrendingIcon,
   Favorite as FavoriteIcon,
   Settings as SettingsIcon,
-  Groups as TeamsIcon,
   WorkspacePremium as PremiumIcon,
 } from '@mui/icons-material';
 
@@ -35,10 +32,10 @@ const menuItems = [
     color: '#1565C0',
   },
   {
-    text: 'Sports',
-    icon: <SportsIcon />,
-    path: '/sports',
-    color: '#FF5722',
+    text: 'My Favourites',
+    icon: <FavoriteIcon />,
+    path: '/favourites',
+    color: '#FF6B9D',
   },
   {
     text: 'Matches',
@@ -52,12 +49,6 @@ const menuItems = [
     path: '/calendar',
     color: '#9C27B0',
   },
-  {
-    text: 'Favourite Teams',
-    icon: <TeamsIcon />,
-    path: '/favourites',
-    color: '#FF6B9D',
-  },
 ];
 
 const secondaryItems = [
@@ -66,12 +57,6 @@ const secondaryItems = [
     icon: <PremiumIcon />,
     path: '/subscription',
     color: '#FFD700',
-  },
-  {
-    text: 'Trending',
-    icon: <TrendingIcon />,
-    path: '/trending',
-    color: '#FF9800',
   },
   {
     text: 'Settings',

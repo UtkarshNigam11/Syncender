@@ -29,6 +29,12 @@ app.use(morgan('dev')); // Logging
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
+// Debug middleware - log all requests
+app.use((req, res, next) => {
+  console.log(`📥 ${req.method} ${req.path}`);
+  next();
+});
+
 // Database connection
 const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/sports-calendar';
 console.log('🔌 Attempting to connect to MongoDB...');
@@ -52,6 +58,7 @@ app.use('/api/apple', require('./routes/appleRoutes'));
 app.use('/api/subscription', require('./routes/subscriptionRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/payment', require('./routes/paymentRoutes'));
+app.use('/api/favourites', require('./routes/favouritesRoutes')); // User favourites management
 
 // Error handling middleware
 const errorHandler = require('./middleware/errorHandler');

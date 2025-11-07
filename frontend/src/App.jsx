@@ -11,8 +11,7 @@ import { AdminAuthProvider } from './context/AdminAuthContext';
 
 // Pages
 import Dashboard from './pages/Dashboard';
-import Sports from './pages/Sports';
-import FavouriteTeams from './pages/FavouriteTeams';
+import Favourites from './pages/Favourites';
 import Matches from './pages/Matches';
 import Calendar from './pages/Calendar';
 import TestCricketMatch from './pages/TestCricketMatch';
@@ -120,10 +119,10 @@ function AppLayout() {
         <Box component="main" sx={{ flexGrow: 1, p: 2, backgroundColor: 'background.default' }}>
           <Routes>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/sports" element={<Sports />} />
-            {/* Favourite teams page (British spelling). Keep /teams as an alias for backwards compatibility. */}
-            <Route path="/teams" element={<FavouriteTeams />} />
-            <Route path="/favourites" element={<FavouriteTeams />} />
+            {/* Favourites page - consolidated Sports + Teams selection */}
+            <Route path="/favourites" element={<Favourites />} />
+            <Route path="/teams" element={<Navigate to="/favourites" replace />} /> {/* Redirect old route */}
+            <Route path="/sports" element={<Navigate to="/favourites" replace />} /> {/* Redirect old route */}
             <Route path="/matches" element={<Matches />} />
             <Route path="/matches/:teamId" element={<Matches />} />
             <Route path="/calendar" element={<Calendar />} />
