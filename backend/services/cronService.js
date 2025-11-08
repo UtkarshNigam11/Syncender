@@ -100,7 +100,7 @@ const syncUserFavoriteMatches = async (user) => {
         });
       }
     });
-  };
+  };k
 
   // Process Cricket matches
   const cricketMatches = cricketRes.data?.matches || cricketRes.data?.data || [];

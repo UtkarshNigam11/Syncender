@@ -25,6 +25,7 @@
     "morgan": "^1.10.0",
     "node-cron": "^4.2.1",
     "node-ical": "^0.17.1",
+    "razorpay": "^2.9.6",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
