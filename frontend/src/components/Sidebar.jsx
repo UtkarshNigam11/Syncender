@@ -20,6 +20,7 @@ import {
   Favorite as FavoriteIcon,
   Settings as SettingsIcon,
   WorkspacePremium as PremiumIcon,
+  HelpOutline as HelpIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 280;
@@ -57,6 +58,12 @@ const secondaryItems = [
     icon: <PremiumIcon />,
     path: '/subscription',
     color: '#FFD700',
+  },
+  {
+    text: 'Support',
+    icon: <HelpIcon />,
+    path: '/support',
+    color: '#FF9800',
   },
   {
     text: 'Settings',
