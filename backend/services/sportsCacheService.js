@@ -26,8 +26,8 @@ const upcomingCache = {
 };
 
 // Tiered TTLs based on data volatility
-const LIVE_TTL = 10 * 1000;      // 10 seconds - live scores change rapidly
-const UPCOMING_TTL = 60 * 1000;   // 60 seconds - schedules are stable
+const LIVE_TTL = 30 * 1000;          // 30 seconds - live scores update frequently
+const UPCOMING_TTL = 2 * 60 * 1000;  // 2 minutes - schedules are stable
 
 /**
  * Clear live match caches only (for refresh button)
