@@ -771,7 +771,21 @@ exports.getDashboardData = async (req, res) => {
 
       allCricketMatches.forEach((event, index) => {
         const matchDate = event.dateTimeGMT ? new Date(event.dateTimeGMT) : new Date();
-        const isLive = event.matchStarted && !event.matchEnded;
+        
+        // Check if match status indicates it's truly live (not stumps/tea/lunch/rain delay)
+        const status = event.status || '';
+        const statusLower = status.toLowerCase();
+        
+        // Status indicating match has paused/ended for the day but not completed
+        const isPaused = statusLower.includes('stumps') || 
+                        statusLower.includes('tea') || 
+                        statusLower.includes('lunch') || 
+                        statusLower.includes('rain') ||
+                        statusLower.includes('bad light') ||
+                        statusLower.includes('delay');
+        
+        // Only show as live if match is actually in progress (not paused)
+        const isLive = event.matchStarted && !event.matchEnded && !isPaused;
         const isUpcoming = matchDate >= now && matchDate <= threeDaysLater && !event.matchStarted;
         const isFinal = event.matchEnded;
         

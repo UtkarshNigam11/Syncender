@@ -42,6 +42,7 @@ import {
   Info,
   EmojiEvents,
   CalendarMonth,
+  Check,
 } from '@mui/icons-material';
 import { AuthContext } from '../context/AuthContext';
 
@@ -63,6 +64,8 @@ const Favourites = () => {
   const [subscription, setSubscription] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
   const [searchTerm, setSearchTerm] = useState('');
+  const [favTeamsSearch, setFavTeamsSearch] = useState('');
+  const [favLeaguesSearch, setFavLeaguesSearch] = useState('');
 
   const maxFavouriteTeams = subscription?.plan === 'pro' ? 7 : 2;
   const maxFavouriteLeagues = subscription?.plan === 'pro' ? 1 : 0;
@@ -360,6 +363,9 @@ const Favourites = () => {
     }
   };
 
+  // Alias for removeFavouriteTeam (used in My Favourites tab)
+  const handleRemoveTeam = removeFavouriteTeam;
+
 
   // Filtered teams based on search
   const filteredTeams = teams.filter(team =>
@@ -459,18 +465,30 @@ const Favourites = () => {
             />
           </Box>
           <Box sx={{ flex: 1 }}>
-            <Typography 
-              variant="h3" 
-              sx={{ 
-                fontWeight: 900, 
-                mb: 1,
-                color: 'white',
-                letterSpacing: '-0.5px',
-                textShadow: '0 2px 20px rgba(0,0,0,0.3)',
-              }}
-            >
-              My Favourites
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+              <Typography 
+                variant="h3" 
+                sx={{ 
+                  fontWeight: 900, 
+                  color: 'white',
+                  letterSpacing: '-0.5px',
+                  textShadow: '0 2px 20px rgba(0,0,0,0.3)',
+                }}
+              >
+                My Favourites
+              </Typography>
+              <Chip
+                icon={<CalendarMonth sx={{ fontSize: 18 }} />}
+                label="Auto-Sync"
+                sx={{
+                  bgcolor: 'rgba(255, 255, 255, 0.25)',
+                  color: 'white',
+                  fontWeight: 600,
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                }}
+              />
+            </Box>
             <Typography 
               variant="h6" 
               sx={{ 
@@ -480,7 +498,7 @@ const Favourites = () => {
                 textShadow: '0 1px 10px rgba(0,0,0,0.2)',
               }}
             >
-              Select your favourite teams and leagues to auto-sync matches to your calendar
+              Your teams & matches sync automatically to Google Calendar
             </Typography>
           </Box>
         </Box>
@@ -635,20 +653,32 @@ const Favourites = () => {
               </CardContent>
             </Card>
           </Grid>
-
-          {/* Info Card */}
-          <Grid item xs={12}>
-            <Alert severity="info" icon={<CalendarMonth />}>
-              <strong>How Auto-Sync Works:</strong> Your favourite teams' upcoming matches (within 2 days) will automatically sync to your Google Calendar every day at 12 AM. 
-              {subscription?.plan === 'pro' && ' For favourite leagues, ALL upcoming matches in that league will be synced.'}
-            </Alert>
-          </Grid>
         </Grid>
       )}
 
       {/* Tab 2: Add Teams & Leagues */}
       {activeTab === 1 && (
         <Box>
+          {/* Unified Search - Works across all steps */}
+          <TextField
+            fullWidth
+            placeholder={
+              step === 'sports' ? "Search sports..." :
+              step === 'leagues' ? "Search leagues..." :
+              "Search teams..."
+            }
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            sx={{ mb: 3 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Search />
+                </InputAdornment>
+              ),
+            }}
+          />
+
           {/* Breadcrumb/Header */}
           <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
             {step !== 'sports' && (
@@ -658,9 +688,9 @@ const Favourites = () => {
             )}
             <Box sx={{ flexGrow: 1 }}>
               <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                {step === 'sports' && '1. Select Sport'}
-                {step === 'leagues' && `2. Select ${selectedSport?.name} League`}
-                {step === 'teams' && `3. Select Teams from ${selectedLeague?.name}`}
+                {step === 'sports' && 'Select Sport'}
+                {step === 'leagues' && `Select ${selectedSport?.name} League`}
+                {step === 'teams' && `Select Teams from ${selectedLeague?.name}`}
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 {step === 'sports' && 'Choose a sport to explore leagues and teams'}
@@ -679,117 +709,110 @@ const Favourites = () => {
           {/* Step 1: Sports Selection */}
           {!loading && step === 'sports' && (
             <Grid container spacing={3}>
-              {sportsConfig.map((sport) => (
-                <Grid item xs={12} sm={6} md={3} key={sport.id}>
-                  <Card
-                    sx={{
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: `0 12px 40px ${alpha(sport.color, 0.3)}`,
-                        borderColor: sport.color,
-                      },
-                      border: '2px solid',
-                      borderColor: 'divider',
-                    }}
-                    onClick={() => handleSportSelect(sport)}
-                  >
-                    <CardContent sx={{ textAlign: 'center', p: 3 }}>
-                      <Avatar
+                {sportsConfig
+                  .filter(sport => 
+                    sport.name.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  .map((sport) => (
+                    <Grid item xs={12} sm={6} md={3} key={sport.id}>
+                      <Card
                         sx={{
-                          bgcolor: sport.color,
-                          width: 64,
-                          height: 64,
-                          mx: 'auto',
-                          mb: 2,
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: `0 12px 40px ${alpha(sport.color, 0.3)}`,
+                            borderColor: sport.color,
+                          },
+                          border: '2px solid',
+                          borderColor: 'divider',
                         }}
+                        onClick={() => handleSportSelect(sport)}
                       >
-                        {sport.icon}
-                      </Avatar>
-                      <Typography variant="h6" gutterBottom>
-                        {sport.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {sport.leagues.length} {sport.leagues.length === 1 ? 'league' : 'leagues'}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
+                        <CardContent sx={{ textAlign: 'center', p: 3 }}>
+                          <Avatar
+                            sx={{
+                              bgcolor: sport.color,
+                              width: 64,
+                              height: 64,
+                              mx: 'auto',
+                              mb: 2,
+                            }}
+                          >
+                            {sport.icon}
+                          </Avatar>
+                          <Typography variant="h6" gutterBottom>
+                            {sport.name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {sport.leagues.length} {sport.leagues.length === 1 ? 'league' : 'leagues'}
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
+              </Grid>
           )}
 
           {/* Step 2: Leagues Selection */}
           {!loading && step === 'leagues' && selectedSport && (
             <Grid container spacing={3}>
-              {selectedSport.leagues.map((league) => (
-                <Grid item xs={12} sm={6} md={4} key={league.id}>
-                  <Card
-                    sx={{
-                      cursor: 'pointer',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: `0 12px 40px ${alpha(selectedSport.color, 0.3)}`,
-                        borderColor: selectedSport.color,
-                      },
-                      border: '2px solid',
-                      borderColor: favouriteLeagues.includes(league.id) ? selectedSport.color : 'divider',
-                      backgroundColor: favouriteLeagues.includes(league.id) ? alpha(selectedSport.color, 0.05) : 'background.paper',
-                    }}
-                    onClick={() => handleLeagueSelect(league)}
-                  >
-                    <CardContent>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-                        <Typography variant="h6">
-                          {league.country} {league.name}
-                        </Typography>
-                        <Tooltip title={subscription?.plan === 'pro' ? 'Add league to favourites' : 'Pro feature'}>
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleLeagueFavourite(league.id, league.name);
-                            }}
-                          >
-                            {favouriteLeagues.includes(league.id) ? (
-                              <Star sx={{ color: 'warning.main' }} />
-                            ) : (
-                              <StarBorder />
-                            )}
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                      <Typography variant="body2" color="text.secondary">
-                        Click to view teams
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
+                {selectedSport.leagues
+                  .filter(league => 
+                    league.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                    league.code.toLowerCase().includes(searchTerm.toLowerCase())
+                  )
+                  .map((league) => (
+                    <Grid item xs={12} sm={6} md={4} key={league.id}>
+                      <Card
+                        sx={{
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease',
+                          '&:hover': {
+                            transform: 'translateY(-4px)',
+                            boxShadow: `0 12px 40px ${alpha(selectedSport.color, 0.3)}`,
+                            borderColor: selectedSport.color,
+                          },
+                          border: '2px solid',
+                          borderColor: favouriteLeagues.includes(league.id) ? selectedSport.color : 'divider',
+                          backgroundColor: favouriteLeagues.includes(league.id) ? alpha(selectedSport.color, 0.05) : 'background.paper',
+                        }}
+                        onClick={() => handleLeagueSelect(league)}
+                      >
+                        <CardContent>
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                            <Typography variant="h6">
+                              {league.country} {league.name}
+                            </Typography>
+                            <Tooltip title={subscription?.plan === 'pro' ? 'Add league to favourites' : 'Pro feature'}>
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleLeagueFavourite(league.id, league.name);
+                                }}
+                              >
+                                {favouriteLeagues.includes(league.id) ? (
+                                  <Star sx={{ color: 'warning.main' }} />
+                                ) : (
+                                  <StarBorder />
+                                )}
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                          <Typography variant="body2" color="text.secondary">
+                            Click to view teams
+                          </Typography>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  ))}
             </Grid>
           )}
 
           {/* Step 3: Teams Selection */}
           {!loading && step === 'teams' && (
             <>
-              {/* Search */}
-              <TextField
-                fullWidth
-                placeholder="Search teams..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                sx={{ mb: 3 }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-
               <Grid container spacing={3}>
                 {filteredTeams.map((team) => {
                   const isFavourite = favouriteTeams.some(t => t.teamId === team.id && t.sport === selectedSport.id);
