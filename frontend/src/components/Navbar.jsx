@@ -7,8 +7,6 @@ import {
   Avatar,
   Badge,
   Box,
-  Menu,
-  MenuItem,
   Chip,
   InputBase,
   alpha,
@@ -28,6 +26,7 @@ import { styled } from '@mui/material/styles';
 import { useTheme } from '../context/ThemeContext';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import NotificationBell from './NotificationBell';
 
 const Search = styled('div')(({ theme }) => ({
   position: 'relative',
@@ -73,8 +72,6 @@ const StyledInputBase = styled(InputBase)(({ theme }) => ({
 }));
 
 const Navbar = () => {
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
   const [prevScrollPos, setPrevScrollPos] = useState(0);
   const [visible, setVisible] = useState(true);
   const { isDarkMode, toggleDarkMode } = useTheme();
@@ -99,32 +96,12 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [prevScrollPos]);
 
-  const handleProfileMenuOpen = (event) => {
+  const handleProfileClick = () => {
     if (!user) {
       navigate('/login');
     } else {
-      setAnchorEl(event.currentTarget);
+      navigate('/profile');
     }
-  };
-
-  const handleNotificationMenuOpen = (event) => {
-    setNotificationAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setNotificationAnchorEl(null);
-  };
-
-  const goTo = (path) => {
-    navigate(path);
-    handleMenuClose();
-  };
-
-  const handleLogout = () => {
-    logout();
-    handleMenuClose();
-    navigate('/login');
   };
 
   const getInitials = (s) => {
@@ -181,16 +158,7 @@ const Navbar = () => {
         <Box sx={{ flexGrow: 1 }} />
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton
-            size="large"
-            aria-label="show notifications"
-            color="inherit"
-            onClick={handleNotificationMenuOpen}
-          >
-            <Badge badgeContent={3} color="error">
-              <NotificationsIcon />
-            </Badge>
-          </IconButton>
+          <NotificationBell />
 
           <IconButton
             size="large"
@@ -211,8 +179,7 @@ const Navbar = () => {
             size="large"
             edge="end"
             aria-label="account of current user"
-            aria-haspopup="true"
-            onClick={handleProfileMenuOpen}
+            onClick={handleProfileClick}
             color="inherit"
           >
             <Tooltip title={avatarLabel} arrow>
@@ -231,48 +198,6 @@ const Navbar = () => {
             </Tooltip>
           </IconButton>
         </Box>
-
-        {user && (
-          <Menu
-            id="primary-search-account-menu"
-            anchorEl={anchorEl}
-            anchorOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-            keepMounted
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-            open={Boolean(anchorEl)}
-            onClose={handleMenuClose}
-          >
-            <MenuItem onClick={() => goTo('/profile')}>Profile</MenuItem>
-            <MenuItem onClick={() => goTo('/calendar')}>My Calendar</MenuItem>
-            <MenuItem onClick={handleLogout}>Logout</MenuItem>
-          </Menu>
-        )}
-
-        <Menu
-          id="notification-menu"
-          anchorEl={notificationAnchorEl}
-          anchorOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
-          }}
-          keepMounted
-          transformOrigin={{
-            vertical: 'top',
-            horizontal: 'right',
-          }}
-          open={Boolean(notificationAnchorEl)}
-          onClose={handleMenuClose}
-        >
-          <MenuItem onClick={handleMenuClose}> Lakers vs Warriors - Tonight 8PM</MenuItem>
-          <MenuItem onClick={handleMenuClose}> NFL Game Alert - Tomorrow</MenuItem>
-          <MenuItem onClick={handleMenuClose}> India vs Australia - Live Now</MenuItem>
-        </Menu>
       </Toolbar>
     </AppBar>
     </Slide>
