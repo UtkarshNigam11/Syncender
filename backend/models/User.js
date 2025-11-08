@@ -82,11 +82,37 @@ const userSchema = new mongoose.Schema({
       default: 'UTC'
     },
     notifications: {
+      // In-app notifications
+      inApp: { type: Boolean, default: true },
+      
+      // Push notifications
+      browserPush: { type: Boolean, default: true },
+      fcmToken: String, // Firebase Cloud Messaging token for push notifications
+      
+      // Match notifications
       matchReminders: { type: Boolean, default: true },
       reminderMinutes: { type: Number, default: 30 },
+      matchStarting: { type: Boolean, default: true },
+      matchLive: { type: Boolean, default: true },
+      matchResults: { type: Boolean, default: true },
+      
+      // Team & League alerts
       teamAlerts: { type: Boolean, default: true },
-      newsUpdates: { type: Boolean, default: false },
+      leagueUpdates: { type: Boolean, default: false },
+      
+      // System notifications
+      calendarSync: { type: Boolean, default: true },
+      subscriptionAlerts: { type: Boolean, default: true },
+      systemAnnouncements: { type: Boolean, default: true },
+      
+      // Email notifications
       emailAlerts: { type: Boolean, default: false },
+      emailDigest: { type: String, enum: ['none', 'daily', 'weekly'], default: 'none' },
+      
+      // Quiet hours
+      quietHoursEnabled: { type: Boolean, default: false },
+      quietHoursStart: { type: String, default: '22:00' }, // 24h format
+      quietHoursEnd: { type: String, default: '08:00' },
     },
     appearance: {
       darkMode: { type: Boolean, default: false }, // legacy toggle

@@ -32,6 +32,7 @@ import AdminSportsManagement from './pages/admin/AdminSportsManagement';
 import AdminMonitoring from './pages/admin/AdminMonitoring';
 import AdminLogs from './pages/admin/AdminLogs';
 import AdminSettings from './pages/admin/AdminSettings';
+import AdminNotifications from './pages/admin/AdminNotifications';
 
 // Components
 import Navbar from './components/Navbar';
@@ -91,6 +92,7 @@ function AppLayout() {
             <Route path="analytics" element={<AdminAnalytics />} />
             <Route path="events" element={<AdminEvents />} />
             <Route path="sports" element={<AdminSportsManagement />} />
+            <Route path="notifications" element={<AdminNotifications />} />
             <Route path="monitoring" element={<AdminMonitoring />} />
             <Route path="logs" element={<AdminLogs />} />
             <Route path="settings" element={<AdminSettings />} />

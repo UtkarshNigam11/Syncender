@@ -6,6 +6,7 @@ const User = require('../models/User');
 const Event = require('../models/Event');
 const ActivityLog = require('../models/ActivityLog');
 const { adminProtect } = require('../middleware/adminAuth');
+const adminNotificationController = require('../controllers/adminNotificationController');
 
 // Admin login (separate from regular user login)
 router.post('/login', [
@@ -791,5 +792,22 @@ router.put('/sports/:sportId/leagues/:leagueId/teams/:teamId', adminProtect, asy
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// ============ NOTIFICATION ROUTES ============
+
+// Send custom notification to specific users or all users
+router.post('/notifications/send', adminProtect, adminNotificationController.sendCustomNotification);
+
+// Send announcement to all Pro users
+router.post('/notifications/pro-announcement', adminProtect, adminNotificationController.sendProAnnouncement);
+
+// Send match alert to users following specific team
+router.post('/notifications/team-alert', adminProtect, adminNotificationController.sendTeamMatchAlert);
+
+// Get notification statistics
+router.get('/notifications/stats', adminProtect, adminNotificationController.getNotificationStats);
+
+// Test notification (send to admin only)
+router.post('/notifications/test', adminProtect, adminNotificationController.testNotification);
 
 module.exports = router;

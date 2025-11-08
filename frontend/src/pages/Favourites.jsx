@@ -789,10 +789,10 @@ const Favourites = () => {
                                 size="small"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  toggleLeagueFavourite(league.id, league.name);
+                                  toggleLeagueFavourite(league);
                                 }}
                               >
-                                {favouriteLeagues.includes(league.id) ? (
+                                {favouriteLeagues.some(l => l.league === league.code && l.sport === selectedSport.id) ? (
                                   <Star sx={{ color: 'warning.main' }} />
                                 ) : (
                                   <StarBorder />

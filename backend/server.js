@@ -59,6 +59,7 @@ app.use('/api/subscription', require('./routes/subscriptionRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/payment', require('./routes/paymentRoutes'));
 app.use('/api/favourites', require('./routes/favouritesRoutes')); // User favourites management
+app.use('/api/notifications', require('./routes/notificationRoutes')); // User notifications
 
 // Error handling middleware
 const errorHandler = require('./middleware/errorHandler');

@@ -29,6 +29,7 @@ import {
   MonitorHeart,
   Article,
   SportsBasketball,
+  Notifications,
 } from '@mui/icons-material';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 
@@ -40,6 +41,7 @@ const menuItems = [
   { text: 'Analytics', icon: <Analytics />, path: '/admin/analytics' },
   { text: 'Events', icon: <Event />, path: '/admin/events' },
   { text: 'Sports & Leagues', icon: <SportsBasketball />, path: '/admin/sports' },
+  { text: 'Notifications', icon: <Notifications />, path: '/admin/notifications' },
   { text: 'Monitoring', icon: <MonitorHeart />, path: '/admin/monitoring' },
   { text: 'Activity Logs', icon: <Article />, path: '/admin/logs' },
   { text: 'Settings', icon: <Settings />, path: '/admin/settings' },

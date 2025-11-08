@@ -149,7 +149,14 @@ const Profile = () => {
               <Autocomplete multiple options={sportsOptions} value={preferences.favoriteSports} onChange={(_, v) => setPreferences({ ...preferences, favoriteSports: v })} renderInput={(params) => <TextField {...params} label="Favourite sports" />} />
             </Grid>
             <Grid item xs={12}>
-              <Autocomplete multiple options={teamsPlaceholder} value={preferences.favoriteTeams} onChange={(_, v) => setPreferences({ ...preferences, favoriteTeams: v })} renderInput={(params) => <TextField {...params} label="Favourite teams or leagues" />} />
+              <Autocomplete 
+                multiple 
+                freeSolo
+                options={teamsPlaceholder} 
+                value={preferences.favoriteTeams?.map(team => typeof team === 'string' ? team : team.name) || []} 
+                onChange={(_, v) => setPreferences({ ...preferences, favoriteTeams: v })} 
+                renderInput={(params) => <TextField {...params} label="Favourite teams or leagues" placeholder="Add teams..." />} 
+              />
             </Grid>
             <Grid item xs={12}><FormControlLabel control={<Switch checked={!!preferences.notifications?.matchReminders} onChange={(_, c) => setPreferences({ ...preferences, notifications: { ...(preferences.notifications || {}), matchReminders: c } })} />} label="Match reminders" /></Grid>
           </Grid>
