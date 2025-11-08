@@ -63,6 +63,7 @@ function Subscription() {
       const response = await axios.get('http://localhost:5000/api/payment/subscription-status', {
         headers: { Authorization: `Bearer ${token}` },
       });
+      console.log('📊 Subscription data:', response.data.subscription);
       setSubscription(response.data.subscription);
       setLoading(false);
     } catch (err) {
@@ -78,22 +79,77 @@ function Subscription() {
       setError('');
 
       const token = localStorage.getItem('token');
+      console.log('🔑 Token:', token ? 'Found' : 'Not found');
       
-      // Create payment session
-      const sessionResponse = await axios.post(
-        'http://localhost:5000/api/payment/create-payment-session',
+      // Step 1: Create Razorpay order
+      console.log('📦 Creating Razorpay order...');
+      const orderResponse = await axios.post(
+        'http://localhost:5000/api/payment/create-order',
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      if (sessionResponse.data.success) {
-        // Open payment dialog
-        setPaymentDialog(true);
-      }
+      console.log('✅ Order created:', orderResponse.data);
+      const { orderId, amount, currency } = orderResponse.data;
+
+      // Step 2: Open Razorpay checkout popup
+      const options = {
+        key: 'rzp_test_RdBMIuSuONIaFA', // Razorpay test key
+        amount: amount,
+        currency: currency,
+        name: 'Syncender',
+        description: 'Pro Plan Subscription - ₹39/month',
+        order_id: orderId,
+        handler: async function (response) {
+          // Step 3: Verify payment on backend
+          try {
+            const verifyResponse = await axios.post(
+              'http://localhost:5000/api/payment/verify',
+              {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (verifyResponse.data.success) {
+              setSuccess('Payment successful! You are now a Pro subscriber.');
+              
+              // Refresh subscription status
+              setTimeout(() => {
+                fetchSubscriptionStatus();
+                setSuccess('');
+              }, 2000);
+            }
+          } catch (err) {
+            console.error('Payment verification error:', err);
+            setError(err.response?.data?.message || 'Payment verification failed');
+          }
+        },
+        prefill: {
+          name: '',
+          email: '',
+          contact: '',
+        },
+        theme: {
+          color: '#667eea',
+        },
+        modal: {
+          ondismiss: function() {
+            setProcessing(false);
+            setError('Payment cancelled. Please try again.');
+          },
+        },
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+      setProcessing(false);
     } catch (err) {
-      console.error('Error creating payment session:', err);
-      setError(err.response?.data?.message || 'Failed to initiate payment');
-    } finally {
+      console.error('❌ Payment error:', err);
+      console.error('Error response:', err.response?.data);
+      setError(err.response?.data?.message || err.response?.data?.error || 'Failed to initiate payment');
       setProcessing(false);
     }
   };
@@ -143,6 +199,10 @@ function Subscription() {
   };
 
   const handleCancelSubscription = async () => {
+    if (!window.confirm('Are you sure you want to cancel your Pro subscription and switch to the Free plan?')) {
+      return;
+    }
+
     try {
       setProcessing(true);
       setError('');
@@ -155,8 +215,13 @@ function Subscription() {
       );
 
       if (response.data.success) {
-        setSuccess(response.data.message);
-        fetchSubscriptionStatus();
+        setSuccess('Subscription cancelled successfully. You are now on the Free plan.');
+        
+        // Refresh subscription status after a short delay
+        setTimeout(() => {
+          fetchSubscriptionStatus();
+          setSuccess('');
+        }, 2000);
       }
     } catch (err) {
       console.error('Error canceling subscription:', err);
@@ -321,7 +386,13 @@ function Subscription() {
                 ))}
               </List>
 
-              {subscription?.plan !== 'pro' || !subscription?.isActive ? (
+              {/* Show Upgrade button only if NOT already Pro and Active */}
+              {(() => {
+                const isPro = subscription?.plan === 'pro';
+                const isActive = subscription?.isActive;
+                console.log('🔍 Button logic - isPro:', isPro, 'isActive:', isActive, 'subscription:', subscription);
+                return !(isPro && isActive);
+              })() && (
                 <Button
                   fullWidth
                   variant="contained"
@@ -333,7 +404,10 @@ function Subscription() {
                 >
                   {processing ? 'Processing...' : 'Upgrade to Pro'}
                 </Button>
-              ) : subscription?.status === 'active' ? (
+              )}
+
+              {/* Show Cancel button only if Pro and Active */}
+              {subscription?.plan === 'pro' && subscription?.isActive && (
                 <Button
                   fullWidth
                   variant="outlined"
@@ -343,9 +417,9 @@ function Subscription() {
                   disabled={processing}
                   sx={{ mt: 3 }}
                 >
-                  {processing ? 'Processing...' : 'Cancel Subscription'}
+                  {processing ? 'Processing...' : 'Switch to Free Plan'}
                 </Button>
-              ) : null}
+              )}
             </CardContent>
           </Card>
         </Grid>
