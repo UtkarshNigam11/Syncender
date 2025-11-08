@@ -55,6 +55,22 @@ exports.syncTeamMatches = async (userId, teamData) => {
       return { success: false, message: 'User not found' };
     }
 
+    // ✅ CHECK: Verify team still exists in user's favorites
+    const favoriteTeams = user.preferences?.favoriteTeams || [];
+    const teamStillExists = favoriteTeams.some(
+      t => t.sport === teamData.sport && t.teamId === teamData.teamId && t.name === teamData.name
+    );
+    
+    if (!teamStillExists) {
+      console.log(`   ⏭️  Team "${teamData.name}" was removed from favorites - skipping sync`);
+      return { 
+        success: true, 
+        message: 'Team removed from favorites',
+        synced: 0,
+        skipped: true
+      };
+    }
+
     // Check if user has Google Calendar connected
     if (!user.googleCalendarToken?.accessToken) {
       console.log(`⚠️  Google Calendar not connected - matches saved to DB only`);
@@ -367,6 +383,22 @@ exports.syncLeagueMatches = async (userId, leagueData) => {
     if (!user) {
       console.error('❌ User not found');
       return { success: false, message: 'User not found' };
+    }
+
+    // ✅ CHECK: Verify league still exists in user's favorites
+    const favoriteLeagues = user.preferences?.favoriteLeagues || [];
+    const leagueStillExists = favoriteLeagues.some(
+      l => l.sport === leagueData.sport && l.league === leagueData.league && l.name === leagueData.name
+    );
+    
+    if (!leagueStillExists) {
+      console.log(`   ⏭️  League "${leagueData.name}" was removed from favorites - skipping sync`);
+      return { 
+        success: true, 
+        message: 'League removed from favorites',
+        synced: 0,
+        skipped: true
+      };
     }
 
     // Check if user has Google Calendar connected
