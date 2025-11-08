@@ -14,6 +14,9 @@ router.get('/teams', userFavouritesController.getFavouriteTeams);
 router.post('/teams', userFavouritesController.addFavouriteTeam);
 router.delete('/teams/:teamId', userFavouritesController.removeFavouriteTeam);
 
+// 🔥 NEW: Manual sync all favorite teams to calendar
+router.post('/sync-all', userFavouritesController.syncAllFavorites);
+
 // Favourite Leagues routes (Pro feature)
 router.get('/leagues', userFavouritesController.getFavouriteLeagues);
 router.post('/leagues', userFavouritesController.addFavouriteLeague);

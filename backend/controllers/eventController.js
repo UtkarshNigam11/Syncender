@@ -146,10 +146,34 @@ exports.syncWithGoogleCalendar = async (req, res) => {
     
     console.log('✅ User authenticated and has Google Calendar token');
 
-    // Get all our events for this user that have Google Calendar IDs
+    // Get all our events for this user
     const localEvents = await Event.find({ user: req.user.userId });
     
     console.log(`📊 Found ${localEvents.length} local events for sync check`);
+    
+    // STEP 1: Push local events that aren't in Google Calendar yet
+    let pushedToGoogle = 0;
+    for (const localEvent of localEvents) {
+      const googleEventId = localEvent.externalIds?.googleCalendar || localEvent.googleCalendarEventId;
+      
+      if (!googleEventId) {
+        console.log(`⬆️  Pushing "${localEvent.title}" to Google Calendar...`);
+        try {
+          const newGoogleEventId = await googleCalendarService.createGoogleCalendarEvent(user, localEvent);
+          localEvent.externalIds = { googleCalendar: newGoogleEventId };
+          localEvent.googleCalendarEventId = newGoogleEventId;
+          await localEvent.save();
+          pushedToGoogle++;
+          console.log(`   ✅ Pushed successfully with ID: ${newGoogleEventId}`);
+        } catch (error) {
+          console.error(`   ❌ Failed to push: ${error.message}`);
+        }
+      }
+    }
+    
+    if (pushedToGoogle > 0) {
+      console.log(`✅ Pushed ${pushedToGoogle} local event(s) to Google Calendar`);
+    }
 
     // Get events from Google Calendar (last 30 days to next 90 days)
     const timeMin = new Date();
@@ -205,7 +229,7 @@ exports.syncWithGoogleCalendar = async (req, res) => {
       }
     }
 
-    console.log(`📊 Sync Summary: ${deletedEvents.length} events deleted locally`);
+    console.log(`📊 Sync Summary: ${pushedToGoogle} pushed, ${deletedEvents.length} deleted locally\n`);
 
     // Get updated list of events after deletion sync
     const updatedEvents = await Event.find({ user: req.user.userId })
@@ -216,6 +240,7 @@ exports.syncWithGoogleCalendar = async (req, res) => {
       data: updatedEvents,
       syncInfo: {
         totalLocalEvents: updatedEvents.length,
+        pushedToGoogle: pushedToGoogle,
         deletedFromLocal: deletedEvents.length,
         deletedEvents: deletedEvents,
         lastSyncTime: new Date()

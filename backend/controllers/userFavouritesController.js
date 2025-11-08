@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const autoSyncService = require('../services/autoSyncService');
 
 /**
  * Get user's favourite teams
@@ -99,12 +100,23 @@ exports.addFavouriteTeam = async (req, res) => {
     user.preferences.favoriteTeams.push(newTeam);
     await user.save();
 
+    // 🔥 NEW: Schedule batched auto-sync for user (after 1 minute)
+    // If multiple teams are added within 1 minute, they'll all be synced together
+    autoSyncService.scheduleAutoSyncForUser(user._id)
+      .then(result => {
+        console.log(`✅ Auto-sync scheduled:`, result.message);
+      })
+      .catch(error => {
+        console.error(`❌ Failed to schedule auto-sync:`, error.message);
+      });
+
     res.json({
       success: true,
-      message: 'Team added to favourites',
+      message: 'Team added to favourites. Matches will be auto-synced to your calendar in 1 minute.',
       data: user.preferences.favoriteTeams,
       count: user.preferences.favoriteTeams.length,
-      limit
+      limit,
+      autoSyncScheduled: true
     });
   } catch (error) {
     console.error('Error adding favourite team:', error);
@@ -279,12 +291,23 @@ exports.addFavouriteLeague = async (req, res) => {
     user.preferences.favoriteLeagues.push(newLeague);
     await user.save();
 
+    // 🔥 NEW: Schedule batched auto-sync for user (after 1 minute)
+    // This will sync ALL favorite teams + leagues together
+    autoSyncService.scheduleAutoSyncForUser(user._id)
+      .then(result => {
+        console.log(`✅ Auto-sync scheduled:`, result.message);
+      })
+      .catch(error => {
+        console.error(`❌ Failed to schedule auto-sync:`, error.message);
+      });
+
     res.json({
       success: true,
-      message: 'League added to favourites',
+      message: 'League added to favourites. All matches will be auto-synced to your calendar in 1 minute.',
       data: user.preferences.favoriteLeagues,
       count: user.preferences.favoriteLeagues.length,
-      limit
+      limit,
+      autoSyncScheduled: true
     });
   } catch (error) {
     console.error('Error adding favourite league:', error);
@@ -388,6 +411,65 @@ exports.getAllFavourites = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to get favourites',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * 🔥 NEW: Manually sync all favorite teams to calendar
+ * Useful when user connects Google Calendar or wants to refresh
+ */
+exports.syncAllFavorites = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Check if user has Google Calendar connected
+    if (!user.googleCalendarToken?.accessToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please connect your Google Calendar first',
+        requiresCalendar: true
+      });
+    }
+
+    const favoriteTeams = user.preferences?.favoriteTeams || [];
+    if (favoriteTeams.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No favorite teams to sync'
+      });
+    }
+
+    console.log(`🔄 Manual sync requested for user ${user.email}`);
+
+    // Trigger sync in background
+    autoSyncService.syncAllFavoriteTeams(user._id)
+      .then(result => {
+        console.log(`✅ Manual sync completed:`, result);
+      })
+      .catch(error => {
+        console.error(`❌ Manual sync failed:`, error.message);
+      });
+
+    res.json({
+      success: true,
+      message: `Syncing matches for ${favoriteTeams.length} favorite team(s). This may take a minute...`,
+      teamsCount: favoriteTeams.length,
+      teams: favoriteTeams.map(t => t.name)
+    });
+  } catch (error) {
+    console.error('Error syncing favorites:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to sync favorites',
       error: error.message
     });
   }

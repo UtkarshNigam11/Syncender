@@ -84,7 +84,7 @@ function Subscription() {
       // Step 1: Create Razorpay order
       console.log('📦 Creating Razorpay order...');
       const orderResponse = await axios.post(
-        'http://localhost:5000/api/payment/create-order',
+        '/api/payment/create-order',
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -94,7 +94,7 @@ function Subscription() {
 
       // Step 2: Open Razorpay checkout popup
       const options = {
-        key: 'rzp_test_RdBMIuSuONIaFA', // Razorpay test key
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_RdBMIuSuONIaFA', // Razorpay key from env
         amount: amount,
         currency: currency,
         name: 'Syncender',
@@ -104,7 +104,7 @@ function Subscription() {
           // Step 3: Verify payment on backend
           try {
             const verifyResponse = await axios.post(
-              'http://localhost:5000/api/payment/verify',
+              '/api/payment/verify',
               {
                 razorpay_order_id: response.razorpay_order_id,
                 razorpay_payment_id: response.razorpay_payment_id,

@@ -29,9 +29,11 @@ app.use(morgan('dev')); // Logging
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
-// Debug middleware - log all requests
+// Debug middleware - log only important requests (not notifications polling)
 app.use((req, res, next) => {
-  console.log(`📥 ${req.method} ${req.path}`);
+  if (!req.path.includes('/notifications/unread-count') && !req.path.includes('/api/sports/scores')) {
+    console.log(`${req.method} ${req.path}`);
+  }
   next();
 });
 

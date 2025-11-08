@@ -7,23 +7,11 @@ import {
   Typography,
   Box,
   Divider,
-  Button,
-  ListItemIcon,
-  ListItemText,
-  Chip,
   CircularProgress,
   Alert,
 } from '@mui/material';
 import {
   Notifications as NotificationsIcon,
-  EmojiEvents,
-  SportsScore,
-  Info,
-  CheckCircle,
-  Error,
-  Delete,
-  MarkEmailRead,
-  Circle,
 } from '@mui/icons-material';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
@@ -89,9 +77,22 @@ const NotificationBell = () => {
     }
   };
 
-  const handleClick = (event) => {
+  const handleClick = async (event) => {
     setAnchorEl(event.currentTarget);
-    fetchNotifications();
+    await fetchNotifications();
+    
+    // Mark all notifications as read when opening the bell
+    if (unreadCount > 0) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.patch('/api/notifications/mark-all-read', {}, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setUnreadCount(0);
+      } catch (err) {
+        console.error('Error marking all as read:', err);
+      }
+    }
   };
 
   const handleClose = () => {
@@ -99,91 +100,10 @@ const NotificationBell = () => {
   };
 
   const handleNotificationClick = async (notification) => {
-    // Mark as read if unread
-    if (!notification.read) {
-      try {
-        const token = localStorage.getItem('token');
-        await axios.patch(`/api/notifications/${notification._id}/read`, {}, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        // Update local state
-        setNotifications(notifications.map(n => 
-          n._id === notification._id ? { ...n, read: true } : n
-        ));
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      } catch (err) {
-        console.error('Error marking notification as read:', err);
-      }
-    }
-
     // Navigate if action URL exists
     if (notification.actionUrl) {
       navigate(notification.actionUrl);
       handleClose();
-    }
-  };
-
-  const handleMarkAllRead = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      await axios.patch('/api/notifications/mark-all-read', {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      // Update local state
-      setNotifications(notifications.map(n => ({ ...n, read: true })));
-      setUnreadCount(0);
-    } catch (err) {
-      console.error('Error marking all as read:', err);
-    }
-  };
-
-  const handleDeleteNotification = async (notificationId, event) => {
-    event.stopPropagation(); // Prevent notification click
-    
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`/api/notifications/${notificationId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      // Remove from local state
-      const notification = notifications.find(n => n._id === notificationId);
-      setNotifications(notifications.filter(n => n._id !== notificationId));
-      
-      if (!notification.read) {
-        setUnreadCount(prev => Math.max(0, prev - 1));
-      }
-    } catch (err) {
-      console.error('Error deleting notification:', err);
-    }
-  };
-
-  const getNotificationIcon = (type) => {
-    switch (type) {
-      case 'match_reminder':
-      case 'match_starting':
-      case 'match_live':
-        return <SportsScore color="error" />;
-      case 'match_result':
-        return <EmojiEvents color="warning" />;
-      case 'calendar_sync_success':
-        return <CheckCircle color="success" />;
-      case 'calendar_sync_failed':
-        return <Error color="error" />;
-      default:
-        return <Info color="info" />;
-    }
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'urgent': return 'error';
-      case 'high': return 'warning';
-      case 'medium': return 'info';
-      case 'low': return 'default';
-      default: return 'default';
     }
   };
 
@@ -227,50 +147,23 @@ const NotificationBell = () => {
         onClose={handleClose}
         PaperProps={{
           sx: {
-            width: 380,
+            width: 360,
             maxWidth: '90vw',
-            maxHeight: 600,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column'
+            maxHeight: 500,
           }
         }}
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
         {/* Header */}
-        <Box sx={{ p: 2, pb: 1, position: 'sticky', top: 0, bgcolor: 'background.paper', zIndex: 1 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
-              Notifications
-            </Typography>
-            {unreadCount > 0 && (
-              <Chip 
-                label={`${unreadCount} new`} 
-                color="error" 
-                size="small"
-                sx={{ height: 20, fontSize: '0.75rem' }}
-              />
-            )}
-          </Box>
-          
-          {notifications.length > 0 && unreadCount > 0 && (
-            <Button 
-              size="small" 
-              startIcon={<MarkEmailRead />}
-              onClick={handleMarkAllRead}
-              fullWidth
-              variant="text"
-            >
-              Mark all as read
-            </Button>
-          )}
+        <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Notifications
+          </Typography>
         </Box>
 
-        <Divider />
-
         {/* Notifications List */}
-        <Box sx={{ overflowY: 'auto', flex: 1 }}>
+        <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
               <CircularProgress size={32} />
@@ -282,7 +175,7 @@ const NotificationBell = () => {
           ) : notifications.length === 0 ? (
             <Box sx={{ p: 4, textAlign: 'center' }}>
               <NotificationsIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary" gutterBottom>
                 No notifications yet
               </Typography>
               <Typography variant="caption" color="text.secondary">
@@ -291,99 +184,45 @@ const NotificationBell = () => {
             </Box>
           ) : (
             notifications.map((notification, index) => (
-              <React.Fragment key={notification._id}>
+              <Box key={notification._id}>
                 <MenuItem
                   onClick={() => handleNotificationClick(notification)}
                   sx={{
-                    py: 1.5,
+                    py: 2,
                     px: 2,
-                    bgcolor: !notification.read ? 'action.hover' : 'transparent',
-                    '&:hover': {
-                      bgcolor: !notification.read ? 'action.selected' : 'action.hover'
-                    },
+                    flexDirection: 'column',
                     alignItems: 'flex-start',
-                    minHeight: 'auto'
+                    '&:hover': {
+                      bgcolor: 'action.hover'
+                    }
                   }}
                 >
-                  <ListItemIcon sx={{ minWidth: 40, mt: 0.5 }}>
-                    {getNotificationIcon(notification.type)}
-                  </ListItemIcon>
-                  
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            fontWeight: !notification.read ? 600 : 400,
-                            flex: 1
-                          }}
-                        >
-                          {notification.title}
-                        </Typography>
-                        {!notification.read && (
-                          <Circle sx={{ fontSize: 8, color: 'primary.main' }} />
-                        )}
-                      </Box>
-                    }
-                    secondary={
-                      <>
-                        <Typography 
-                          variant="caption" 
-                          color="text.secondary"
-                          sx={{ display: 'block', mb: 0.5 }}
-                        >
-                          {notification.message}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                          <Typography variant="caption" color="text.disabled">
-                            {formatTime(notification.createdAt)}
-                          </Typography>
-                          {notification.priority !== 'low' && notification.priority !== 'medium' && (
-                            <Chip 
-                              label={notification.priority} 
-                              size="small"
-                              color={getPriorityColor(notification.priority)}
-                              sx={{ height: 16, fontSize: '0.65rem' }}
-                            />
-                          )}
-                        </Box>
-                      </>
-                    }
-                  />
-                  
-                  <IconButton
-                    size="small"
-                    onClick={(e) => handleDeleteNotification(notification._id, e)}
-                    sx={{ ml: 1, mt: 0.5 }}
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      fontWeight: 500,
+                      mb: 0.5,
+                      width: '100%'
+                    }}
                   >
-                    <Delete fontSize="small" />
-                  </IconButton>
+                    {notification.title}
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary"
+                    sx={{ mb: 0.5, width: '100%' }}
+                  >
+                    {notification.message}
+                  </Typography>
+                  <Typography variant="caption" color="text.disabled">
+                    {formatTime(notification.createdAt)}
+                  </Typography>
                 </MenuItem>
                 {index < notifications.length - 1 && <Divider />}
-              </React.Fragment>
+              </Box>
             ))
           )}
         </Box>
-
-        {/* Footer */}
-        {notifications.length > 0 && (
-          <>
-            <Divider />
-            <Box sx={{ p: 1.5, textAlign: 'center' }}>
-              <Button 
-                size="small" 
-                onClick={() => {
-                  navigate('/settings');
-                  handleClose();
-                }}
-                fullWidth
-              >
-                Notification Settings
-              </Button>
-            </Box>
-          </>
-        )}
       </Menu>
     </>
   );
