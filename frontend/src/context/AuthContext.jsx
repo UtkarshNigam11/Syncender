@@ -73,7 +73,13 @@ export const AuthProvider = ({ children }) => {
         ? nameOrData
         : { name: nameOrData, email, password };
 
-      await axios.post('/api/auth/register', payload);
+      const res = await axios.post('/api/auth/register', payload);
+      
+      // Auto-login after registration with the returned token
+      if (res.data?.token) {
+        setAuthToken(res.data.token);
+      }
+      
       return { success: true };
     } catch (error) {
       console.error('Register error:', error.response?.data || error.message);

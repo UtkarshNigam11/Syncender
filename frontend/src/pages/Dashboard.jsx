@@ -53,7 +53,7 @@ const Dashboard = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await axios.get('http://localhost:5000/api/events', {
+      const response = await axios.get('/api/events', {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -122,7 +122,7 @@ const Dashboard = () => {
           return;
       }
 
-      const response = await axios.post('http://localhost:5000/api/events', eventData, {
+      const response = await axios.post('/api/events', eventData, {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -157,10 +157,10 @@ const Dashboard = () => {
         const token = localStorage.getItem('token');
         if (token) {
           const [userRes, subRes] = await Promise.all([
-            axios.get('http://localhost:5000/api/users/me', {
+            axios.get('/api/users/me', {
               headers: { Authorization: `Bearer ${token}` }
             }),
-            axios.get('http://localhost:5000/api/subscription', {
+            axios.get('/api/subscription', {
               headers: { Authorization: `Bearer ${token}` }
             })
           ]);
@@ -192,8 +192,8 @@ const Dashboard = () => {
         
         // Add query param based on refresh type
         const url = refreshLiveOnly
-          ? 'http://localhost:5000/api/sports/dashboard?refreshLive=true'
-          : 'http://localhost:5000/api/sports/dashboard';
+          ? '/api/sports/dashboard?refreshLive=true'
+          : '/api/sports/dashboard';
         
         const response = await axios.get(url);
         

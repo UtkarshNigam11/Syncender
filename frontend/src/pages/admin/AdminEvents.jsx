@@ -38,7 +38,7 @@ function AdminEvents() {
   const fetchEvents = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await axios.get('http://localhost:5000/api/admin/events', {
+      const response = await axios.get('/api/admin/events', {
         headers: { Authorization: `Bearer ${token}` },
         params: {
           page: page + 1,

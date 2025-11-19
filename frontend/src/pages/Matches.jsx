@@ -69,8 +69,8 @@ const Matches = () => {
 
       // Add query param based on refresh type
       const url = refreshLiveOnly
-        ? 'http://localhost:5000/api/sports/dashboard?refreshLive=true'
-        : 'http://localhost:5000/api/sports/dashboard';
+        ? '/api/sports/dashboard?refreshLive=true'
+        : '/api/sports/dashboard';
 
       // Use the same unified dashboard API
       const response = await axios.get(url);
@@ -159,7 +159,7 @@ const Matches = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await axios.get('http://localhost:5000/api/events', {
+      const response = await axios.get('/api/events', {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -270,7 +270,7 @@ const Matches = () => {
 
       if (calendarType === 'apple') {
         // Download ICS file via backend or generate client-side
-        const icsResponse = await axios.post('http://localhost:5000/api/apple/calendar', {
+        const icsResponse = await axios.post('/api/apple/calendar', {
           summary: eventData.title,
           description: eventData.description,
           startTime: eventData.startTime,
@@ -292,7 +292,7 @@ const Matches = () => {
         window.URL.revokeObjectURL(url);
       } else {
         // Google Calendar
-        const response = await axios.post('http://localhost:5000/api/events', eventData, {
+        const response = await axios.post('/api/events', eventData, {
           headers: {
             Authorization: `Bearer ${token}`
           }

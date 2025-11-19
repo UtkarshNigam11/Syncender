@@ -11,6 +11,9 @@ const axios = require('axios');
 // Store pending sync timers for each user
 const pendingSyncs = new Map();
 
+// Base URL for internal API calls
+const BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000';
+
 /**
  * Trigger auto-sync for a specific user (debounced - batches multiple teams)
  * If multiple teams are added within 1 minute, they'll all be synced together
@@ -254,7 +257,7 @@ exports.getCricketMatches = async (teamData) => {
  */
 exports.getNFLMatches = async (teamData) => {
   try {
-    const response = await axios.get('http://localhost:5000/api/sports/scores/nfl');
+    const response = await axios.get(`${BASE_URL}/api/sports/scores/nfl`);
     const events = response.data?.data?.events || [];
 
     return this.filterESPNMatches(events, teamData, 'NFL', 3);
@@ -269,7 +272,7 @@ exports.getNFLMatches = async (teamData) => {
  */
 exports.getNBAMatches = async (teamData) => {
   try {
-    const response = await axios.get('http://localhost:5000/api/sports/scores/nba');
+    const response = await axios.get(`${BASE_URL}/api/sports/scores/nba`);
     const events = response.data?.data?.events || [];
 
     return this.filterESPNMatches(events, teamData, 'NBA', 2.5);
@@ -286,9 +289,9 @@ exports.getSoccerMatches = async (teamData) => {
   try {
     // Fetch from multiple leagues
     const [eplRes, uclRes, laLigaRes] = await Promise.allSettled([
-      axios.get('http://localhost:5000/api/sports/scores/soccer/eng.1'),
-      axios.get('http://localhost:5000/api/sports/scores/soccer/uefa.champions'),
-      axios.get('http://localhost:5000/api/sports/scores/soccer/esp.1')
+      axios.get(`${BASE_URL}/api/sports/scores/soccer/eng.1`),
+      axios.get(`${BASE_URL}/api/sports/scores/soccer/uefa.champions`),
+      axios.get(`${BASE_URL}/api/sports/scores/soccer/esp.1`)
     ]);
 
     const allEvents = [];
@@ -562,7 +565,7 @@ exports.getAllSoccerLeagueMatches = async (leagueData) => {
 
     const leagueCode = leagueMap[leagueData.league.toLowerCase()] || leagueData.league;
     
-    const response = await axios.get(`http://localhost:5000/api/sports/scores/soccer/${leagueCode}`);
+    const response = await axios.get(`${BASE_URL}/api/sports/scores/soccer/${leagueCode}`);
     const events = response.data?.data?.events || [];
 
     return this.filterESPNMatchesForLeague(events, leagueData.name, 'Soccer', 2);
@@ -577,7 +580,7 @@ exports.getAllSoccerLeagueMatches = async (leagueData) => {
  */
 exports.getAllNFLMatches = async () => {
   try {
-    const response = await axios.get('http://localhost:5000/api/sports/scores/nfl');
+    const response = await axios.get(`${BASE_URL}/api/sports/scores/nfl`);
     const events = response.data?.data?.events || [];
     return this.filterESPNMatchesForLeague(events, 'NFL', 'NFL', 3);
   } catch (error) {
@@ -591,7 +594,7 @@ exports.getAllNFLMatches = async () => {
  */
 exports.getAllNBAMatches = async () => {
   try {
-    const response = await axios.get('http://localhost:5000/api/sports/scores/nba');
+    const response = await axios.get(`${BASE_URL}/api/sports/scores/nba`);
     const events = response.data?.data?.events || [];
     return this.filterESPNMatchesForLeague(events, 'NBA', 'NBA', 2.5);
   } catch (error) {

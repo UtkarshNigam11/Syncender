@@ -39,21 +39,22 @@ const syncUserFavoriteMatches = async (user) => {
   console.log(`[CRON] Syncing matches for user ${user.email}, favorites: ${favoriteTeams.join(', ')}`);
 
   // Fetch all sports matches from all sources
+  const BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000';
   const [nflRes, nbaRes, eplRes, uclRes, cricketRes] = await Promise.all([
     axios
-      .get('http://localhost:5000/api/sports/scores/nfl')
+      .get(`${BASE_URL}/api/sports/scores/nfl`)
       .catch(() => ({ data: { data: { events: [] } } })),
     axios
-      .get('http://localhost:5000/api/sports/scores/nba')
+      .get(`${BASE_URL}/api/sports/scores/nba`)
       .catch(() => ({ data: { data: { events: [] } } })),
     axios
-      .get('http://localhost:5000/api/sports/scores/soccer/eng.1')
+      .get(`${BASE_URL}/api/sports/scores/soccer/eng.1`)
       .catch(() => ({ data: { data: { events: [] } } })),
     axios
-      .get('http://localhost:5000/api/sports/scores/soccer/uefa.champions')
+      .get(`${BASE_URL}/api/sports/scores/soccer/uefa.champions`)
       .catch(() => ({ data: { data: { events: [] } } })),
     axios
-      .get('http://localhost:5000/api/sports/cricket/matches')
+      .get(`${BASE_URL}/api/sports/cricket/matches`)
       .catch(() => {
         return { data: { matches: [] } };
       })

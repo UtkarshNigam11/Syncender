@@ -32,7 +32,7 @@ function AdminSettings() {
   const fetchHealth = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await axios.get('http://localhost:5000/api/admin/system/health', {
+      const response = await axios.get('/api/admin/system/health', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setHealth(response.data.health);
@@ -159,7 +159,7 @@ function AdminSettings() {
               Base URL
             </Typography>
             <Typography variant="body1" fontWeight="mono">
-              http://localhost:5000/api
+              {window.location.origin}/api
             </Typography>
           </Box>
           <Box sx={{ mt: 2 }}>
@@ -167,7 +167,7 @@ function AdminSettings() {
               Admin API
             </Typography>
             <Typography variant="body1" fontWeight="mono">
-              http://localhost:5000/api/admin
+              {window.location.origin}/api/admin
             </Typography>
           </Box>
         </CardContent>

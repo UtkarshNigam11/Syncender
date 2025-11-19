@@ -64,7 +64,7 @@ function AdminUsers() {
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await axios.get('http://localhost:5000/api/admin/users', {
+      const response = await axios.get('/api/admin/users', {
         headers: { Authorization: `Bearer ${token}` },
         params: {
           page: page + 1,
@@ -87,7 +87,7 @@ function AdminUsers() {
   const handleViewUser = async (userId) => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await axios.get(`http://localhost:5000/api/admin/users/${userId}`, {
+      const response = await axios.get(`/api/admin/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSelectedUser(response.data.user);
@@ -112,7 +112,7 @@ function AdminUsers() {
     try {
       const token = localStorage.getItem('adminToken');
       await axios.put(
-        `http://localhost:5000/api/admin/users/${selectedUser._id}`,
+        `/api/admin/users/${selectedUser._id}`,
         editFormData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -127,7 +127,7 @@ function AdminUsers() {
   const handleDeleteUser = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      await axios.delete(`http://localhost:5000/api/admin/users/${selectedUser._id}`, {
+      await axios.delete(`/api/admin/users/${selectedUser._id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setDeleteDialog(false);
@@ -142,7 +142,7 @@ function AdminUsers() {
     try {
       const token = localStorage.getItem('adminToken');
       await axios.put(
-        `http://localhost:5000/api/admin/users/${userId}`,
+        `/api/admin/users/${userId}`,
         { isActive: !currentStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );

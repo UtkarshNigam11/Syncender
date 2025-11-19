@@ -23,7 +23,7 @@ export const AdminAuthProvider = ({ children }) => {
     const token = localStorage.getItem('adminToken');
     if (token) {
       try {
-        const response = await axios.get('http://localhost:5000/api/admin/dashboard/stats', {
+        const response = await axios.get('/api/admin/dashboard/stats', {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (response.data.success) {
@@ -39,7 +39,7 @@ export const AdminAuthProvider = ({ children }) => {
   };
 
   const login = async (email, password) => {
-    const response = await axios.post('http://localhost:5000/api/admin/login', {
+    const response = await axios.post('/api/admin/login', {
       email,
       password,
     });

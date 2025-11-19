@@ -40,13 +40,13 @@ function AdminMonitoring() {
       const token = localStorage.getItem('adminToken');
       
       const [healthRes, apiRes, cronRes] = await Promise.all([
-        axios.get('http://localhost:5000/api/admin/system/health', {
+        axios.get('/api/admin/system/health', {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get('http://localhost:5000/api/admin/system/api-health', {
+        axios.get('/api/admin/system/api-health', {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get('http://localhost:5000/api/admin/system/cron-status', {
+        axios.get('/api/admin/system/cron-status', {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);

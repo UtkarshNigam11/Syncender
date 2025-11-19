@@ -67,7 +67,7 @@ function AdminSportsManagement() {
   const fetchSportsData = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await axios.get('http://localhost:5000/api/admin/sports', {
+      const response = await axios.get('/api/admin/sports', {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSportsData(response.data.sports);
@@ -83,7 +83,7 @@ function AdminSportsManagement() {
     try {
       const token = localStorage.getItem('adminToken');
       const response = await axios.get(
-        `http://localhost:5000/api/admin/sports/${sport}/leagues/${league}/teams`,
+        `/api/admin/sports/${sport}/leagues/${league}/teams`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -99,7 +99,7 @@ function AdminSportsManagement() {
     try {
       const token = localStorage.getItem('adminToken');
       await axios.put(
-        `http://localhost:5000/api/admin/sports/${sportId}`,
+        `/api/admin/sports/${sportId}`,
         { enabled: !currentStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -120,7 +120,7 @@ function AdminSportsManagement() {
     try {
       const token = localStorage.getItem('adminToken');
       await axios.put(
-        `http://localhost:5000/api/admin/sports/${sportId}/leagues/${leagueId}`,
+        `/api/admin/sports/${sportId}/leagues/${leagueId}`,
         { enabled: !currentStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -149,7 +149,7 @@ function AdminSportsManagement() {
     try {
       const token = localStorage.getItem('adminToken');
       await axios.put(
-        `http://localhost:5000/api/admin/sports/${sportId}/leagues/${leagueId}/teams/${teamId}`,
+        `/api/admin/sports/${sportId}/leagues/${leagueId}/teams/${teamId}`,
         { enabled: !currentStatus },
         { headers: { Authorization: `Bearer ${token}` } }
       );

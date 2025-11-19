@@ -10,6 +10,7 @@ import {
   Box,
   CircularProgress,
   Alert,
+  AlertTitle,
   IconButton,
   Chip,
   Snackbar,
@@ -28,6 +29,11 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogContentText,
 } from '@mui/material';
 import {
   Star,
@@ -43,6 +49,9 @@ import {
   EmojiEvents,
   CalendarMonth,
   Check,
+  Warning,
+  Link as LinkIcon,
+  EventAvailable,
 } from '@mui/icons-material';
 import { AuthContext } from '../context/AuthContext';
 
@@ -66,6 +75,10 @@ const Favourites = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [favTeamsSearch, setFavTeamsSearch] = useState('');
   const [favLeaguesSearch, setFavLeaguesSearch] = useState('');
+  
+  // Calendar connection state
+  const [calendarConnected, setCalendarConnected] = useState(false);
+  const [showCalendarWarning, setShowCalendarWarning] = useState(false);
 
   const maxFavouriteTeams = subscription?.plan === 'pro' ? 7 : 2;
   const maxFavouriteLeagues = subscription?.plan === 'pro' ? 1 : 0;
@@ -136,6 +149,14 @@ const Favourites = () => {
         
         setFavouriteTeams(res.data.data?.teams || []);
         setFavouriteLeagues(res.data.data?.leagues || []);
+        
+        // Check if calendar is connected
+        const profileRes = await axios.get('/api/profile', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        const hasCalendar = !!profileRes.data?.user?.googleCalendarToken?.accessToken;
+        setCalendarConnected(hasCalendar);
       } catch (err) {
         console.error('Error loading favourites:', err);
         console.error('Error response:', err.response?.status, err.response?.data);
@@ -156,13 +177,13 @@ const Favourites = () => {
     try {
       let url = '';
       if (sport.id === 'cricket') {
-        url = `http://localhost:5000/api/sports/teams/cricket?league=${league.code}`;
+        url = `/api/sports/teams/cricket?league=${league.code}`;
       } else if (sport.id === 'soccer') {
-        url = `http://localhost:5000/api/sports/teams/soccer?league=${league.code}`;
+        url = `/api/sports/teams/soccer?league=${league.code}`;
       } else if (sport.id === 'nfl') {
-        url = `http://localhost:5000/api/sports/teams/nfl`;
+        url = `/api/sports/teams/nfl`;
       } else if (sport.id === 'nba') {
-        url = `http://localhost:5000/api/sports/teams/nba`;
+        url = `/api/sports/teams/nba`;
       }
       
       const res = await axios.get(url);
@@ -223,6 +244,14 @@ const Favourites = () => {
     }
 
     const isFavourite = favouriteTeams.some(t => t.teamId === team.id && t.sport === selectedSport.id);
+    
+    // Show calendar warning for first favorite if calendar not connected
+    if (!isFavourite && favouriteTeams.length === 0 && !calendarConnected) {
+      setShowCalendarWarning(true);
+      // Store the team to add after user acknowledges
+      window.pendingFavoriteTeam = team;
+      return;
+    }
     
     if (!isFavourite && favouriteTeams.length >= maxFavouriteTeams) {
       setSnackbar({ 
@@ -336,7 +365,7 @@ const Favourites = () => {
   // Remove team from favourites (from "My Favourites" tab)
   const removeFavouriteTeam = async (team) => {
     try {
-      await axios.delete(`http://localhost:5000/api/favourites/teams/${team.teamId}?sport=${team.sport}`, {
+      await axios.delete(`/api/favourites/teams/${team.teamId}?sport=${team.sport}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -366,6 +395,46 @@ const Favourites = () => {
   // Alias for removeFavouriteTeam (used in My Favourites tab)
   const handleRemoveTeam = removeFavouriteTeam;
 
+  // Handle calendar warning dialog - Continue without calendar
+  const handleContinueWithoutCalendar = async () => {
+    setShowCalendarWarning(false);
+    if (window.pendingFavoriteTeam) {
+      const team = window.pendingFavoriteTeam;
+      window.pendingFavoriteTeam = null;
+      
+      // Add team without calendar warning (extracted logic from toggleTeamFavourite)
+      try {
+        const res = await axios.post('/api/favourites/teams', {
+          sport: selectedSport.id,
+          league: selectedLeague?.code || '',
+          teamId: team.id,
+          name: team.name,
+          shortName: team.shortName || team.abbreviation || team.name,
+          logo: team.logo || ''
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        setFavouriteTeams(res.data.data || []);
+        setSnackbar({ 
+          open: true, 
+          message: 'Added to favourites', 
+          severity: 'success' 
+        });
+      } catch (err) {
+        console.error('Error adding favourite:', err);
+        const errorMsg = err.response?.data?.message || 'Failed to add to favourites';
+        setSnackbar({ open: true, message: errorMsg, severity: 'error' });
+      }
+    }
+  };
+
+  // Handle calendar warning dialog - Connect calendar
+  const handleConnectCalendar = () => {
+    setShowCalendarWarning(false);
+    window.pendingFavoriteTeam = null;
+    navigate('/settings');
+  };
 
   // Filtered teams based on search
   const filteredTeams = teams.filter(team =>
@@ -388,6 +457,29 @@ const Favourites = () => {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
+      {/* Calendar Connection Warning Banner */}
+      {!calendarConnected && (
+        <Alert 
+          severity="warning" 
+          icon={<Warning />}
+          action={
+            <Button 
+              color="inherit" 
+              size="small" 
+              startIcon={<LinkIcon />}
+              onClick={handleConnectCalendar}
+            >
+              Connect Now
+            </Button>
+          }
+          sx={{ mb: 3 }}
+        >
+          <AlertTitle sx={{ fontWeight: 600 }}>Calendar Not Connected</AlertTitle>
+          Your favorite teams are saved, but matches won't sync to your calendar automatically. 
+          Connect your Google Calendar in Settings to enable auto-sync.
+        </Alert>
+      )}
+
       {/* Header */}
       <Box 
         sx={{ 
@@ -616,13 +708,14 @@ const Favourites = () => {
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                       No favourite leagues yet
                     </Typography>
-                    <Button 
+                    {/* Temporarily hidden - Coming soon with Pro */}
+                    {/* <Button 
                       variant="outlined" 
                       onClick={() => setActiveTab(1)}
                       startIcon={<EmojiEvents />}
                     >
                       Add League
-                    </Button>
+                    </Button> */}
                   </Box>
                 ) : (
                   <List>
@@ -871,6 +964,56 @@ const Favourites = () => {
           )}
         </Box>
       )}
+
+      {/* Calendar Warning Dialog */}
+      <Dialog
+        open={showCalendarWarning}
+        onClose={() => {
+          setShowCalendarWarning(false);
+          window.pendingFavoriteTeam = null;
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Warning color="warning" />
+          Calendar Not Connected
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            You haven't connected your Google Calendar yet. Your favorite teams will be saved, 
+            but their matches <strong>won't automatically sync to your calendar</strong>.
+          </DialogContentText>
+          <DialogContentText sx={{ mt: 2 }}>
+            <strong>What you can do:</strong>
+          </DialogContentText>
+          <Box component="ul" sx={{ pl: 2, mt: 1 }}>
+            <li>
+              <Typography variant="body2" color="text.secondary">
+                <strong>Continue without calendar:</strong> Add favorites now, connect calendar later
+              </Typography>
+            </li>
+            <li>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                <strong>Connect now:</strong> Go to Settings to enable auto-sync immediately
+              </Typography>
+            </li>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleContinueWithoutCalendar} color="inherit">
+            Continue Without Calendar
+          </Button>
+          <Button 
+            onClick={handleConnectCalendar} 
+            variant="contained" 
+            startIcon={<EventAvailable />}
+            color="primary"
+          >
+            Connect Calendar
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Snackbar for notifications */}
       <Snackbar

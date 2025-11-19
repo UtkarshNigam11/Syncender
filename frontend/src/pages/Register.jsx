@@ -45,18 +45,38 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    
+    // Validation
+    if (!formData.name.trim()) {
+      setError('Name is required');
+      return;
+    }
+    
+    if (!formData.email.trim()) {
+      setError('Email is required');
+      return;
+    }
+    
+    if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters long');
+      return;
+    }
+    
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
+    
     try {
       const res = await register({
         name: formData.name,
         email: formData.email,
         password: formData.password,
       });
+      
       if (res?.success) {
-        navigate('/login');
+        // Redirect to dashboard after successful registration
+        navigate('/dashboard');
       } else {
         setError(res?.message || 'Registration failed');
       }

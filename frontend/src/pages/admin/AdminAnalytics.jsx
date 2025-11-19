@@ -49,16 +49,16 @@ function AdminAnalytics() {
       const token = localStorage.getItem('adminToken');
       
       const [growthRes, subRes, sportsRes, metricsRes] = await Promise.all([
-        axios.get(`http://localhost:5000/api/admin/analytics/user-growth?days=${days}`, {
+        axios.get(`/api/admin/analytics/user-growth?days=${days}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get('http://localhost:5000/api/admin/analytics/subscription-distribution', {
+        axios.get('/api/admin/analytics/subscription-distribution', {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get('http://localhost:5000/api/admin/analytics/popular-sports', {
+        axios.get('/api/admin/analytics/popular-sports', {
           headers: { Authorization: `Bearer ${token}` },
         }),
-        axios.get('http://localhost:5000/api/admin/analytics/subscription-metrics', {
+        axios.get('/api/admin/analytics/subscription-metrics', {
           headers: { Authorization: `Bearer ${token}` },
         }),
       ]);
