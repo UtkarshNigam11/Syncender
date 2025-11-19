@@ -3,10 +3,12 @@
     {
       "source": "/api/:path*",
       "destination": "https://syncender-backend.onrender.com/api/:path*"
-    },
+    }
+  ],
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ]
 }
