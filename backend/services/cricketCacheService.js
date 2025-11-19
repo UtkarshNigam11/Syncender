@@ -131,19 +131,27 @@ exports.refreshLiveMatches = async () => {
       const apiMatch = apiMatches.find(m => m.id === dbMatch.matchId);
       
       if (apiMatch) {
-        dbMatch.status = apiMatch.status;
-        dbMatch.matchStarted = apiMatch.matchStarted;
-        dbMatch.matchEnded = apiMatch.matchEnded;
-        dbMatch.score = apiMatch.score || [];
-        dbMatch.lastFetched = new Date();
-        
-        // Stop refreshing if match ended
-        if (apiMatch.matchEnded) {
-          dbMatch.shouldRefresh = false;
+        try {
+          // Update using findOneAndUpdate to avoid version conflicts
+          await CricketMatch.findOneAndUpdate(
+            { _id: dbMatch._id },
+            {
+              $set: {
+                status: apiMatch.status,
+                matchStarted: apiMatch.matchStarted,
+                matchEnded: apiMatch.matchEnded,
+                score: apiMatch.score || [],
+                lastFetched: new Date(),
+                shouldRefresh: !apiMatch.matchEnded
+              }
+            },
+            { new: true }
+          );
+          refreshed++;
+        } catch (saveError) {
+          console.error(`⚠️ Error updating match ${dbMatch.matchId}:`, saveError.message);
+          // Continue with other matches
         }
-        
-        await dbMatch.save();
-        refreshed++;
       }
     }
 
