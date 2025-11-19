@@ -129,14 +129,37 @@ const Navbar = () => {
       >
         <Toolbar>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
-            <CalendarToday sx={{ color: 'primary.main', flexShrink: 0 }} />
+            {/* Logo Image */}
+            <Box
+              component="img"
+              src="/logo.png"
+              alt="Syncender Logo"
+              sx={{
+                height: 40,
+                width: 40,
+                objectFit: 'contain',
+                flexShrink: 0,
+              }}
+              onError={(e) => {
+                // Fallback to icon if logo fails to load
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'block';
+              }}
+            />
+            <CalendarToday 
+              sx={{ 
+                color: 'primary.main', 
+                flexShrink: 0,
+                display: 'none' // Hidden by default, shown only if logo fails
+              }} 
+            />
             <Typography
               variant="h6"
               noWrap
             sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1, maxWidth: { xs: 140, sm: 220, md: 280 } }}
-            title="SportsCalendar"
+            title="Syncender"
           >
-            SportsCalendar
+            Syncender
           </Typography>
           {userPlan === 'pro' && (
             <Chip

@@ -316,11 +316,28 @@ const Dashboard = () => {
               boxShadow: '0 8px 32px rgba(255, 255, 255, 0.2)',
             }}
           >
+            <Box
+              component="img"
+              src="/logo.png"
+              alt="Syncender Logo"
+              sx={{
+                width: 56,
+                height: 56,
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.2))',
+              }}
+              onError={(e) => {
+                // Fallback to icon if logo fails
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'block';
+              }}
+            />
             <DashboardIcon 
               sx={{ 
                 fontSize: 48, 
                 color: 'white',
                 filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.2))',
+                display: 'none', // Hidden by default
               }} 
             />
           </Box>
