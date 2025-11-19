@@ -21,6 +21,8 @@ import Settings from './pages/Settings';
 import Profile from './pages/Profile';
 import Subscription from './pages/Subscription';
 import Support from './pages/Support';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 
 // Admin Pages
 import AdminLogin from './pages/admin/AdminLogin';
@@ -66,7 +68,7 @@ function AppLayout() {
   const location = useLocation();
   
   // Routes that should NOT show navbar/sidebar (public routes)
-  const publicRoutes = ['/login', '/register', '/auth/google/callback'];
+  const publicRoutes = ['/login', '/register', '/auth/google/callback', '/privacy', '/terms'];
   const isPublicRoute = publicRoutes.includes(location.pathname);
 
   // Admin routes
@@ -109,6 +111,8 @@ function AppLayout() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/auth/google/callback" element={<OAuthHandler />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
       </Routes>
     );
   }
