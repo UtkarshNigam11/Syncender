@@ -60,6 +60,7 @@ app.use('/api/apple', require('./routes/appleRoutes'));
 app.use('/api/subscription', require('./routes/subscriptionRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/payment', require('./routes/paymentRoutes'));
+app.use('/api/profile', require('./routes/profileRoutes')); // User profile management
 app.use('/api/favourites', require('./routes/favouritesRoutes')); // User favourites management
 app.use('/api/notifications', require('./routes/notificationRoutes')); // User notifications
 
